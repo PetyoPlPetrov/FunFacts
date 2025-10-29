@@ -19,6 +19,7 @@ import { ThemedView } from '@/components/themed-view';
 import { EnhancedFact } from '@/services/facts-api';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { NativeAd } from '@/components/ads/native-ad';
 
 interface FactDetailModalProps {
   visible: boolean;
@@ -83,7 +84,7 @@ export function FactDetailModal({ visible, fact, onClose }: FactDetailModalProps
     >
       <ThemedView style={styles.container}>
         <LinearGradient
-          colors={['#6366F1', '#6366F180', '#6366F140']}
+          colors={['#FFFFFF', '#FFFFFF', '#FFFFFF']}
           style={styles.header}
         >
           <ThemedView style={styles.headerContent}>
@@ -111,7 +112,7 @@ export function FactDetailModal({ visible, fact, onClose }: FactDetailModalProps
             <ThemedText style={styles.sectionTitle}>Details</ThemedText>
 
             <ThemedView style={styles.detailRow}>
-              <IconSymbol name="globe" size={20} color="#6366F1" />
+              <IconSymbol name="globe" size={20} color="#9CA3AF" />
               <ThemedView style={styles.detailContent}>
                 <ThemedText style={styles.detailLabel}>Source</ThemedText>
                 <ThemedText style={styles.detailValue}>{fact.source}</ThemedText>
@@ -120,7 +121,7 @@ export function FactDetailModal({ visible, fact, onClose }: FactDetailModalProps
 
             {fact.dateDiscovered && (
               <ThemedView style={styles.detailRow}>
-                <IconSymbol name="calendar" size={20} color="#6366F1" />
+                <IconSymbol name="calendar" size={20} color="#9CA3AF" />
                 <ThemedView style={styles.detailContent}>
                   <ThemedText style={styles.detailLabel}>Discovered</ThemedText>
                   <ThemedText style={styles.detailValue}>
@@ -131,26 +132,26 @@ export function FactDetailModal({ visible, fact, onClose }: FactDetailModalProps
             )}
           </ThemedView>
 
+          {/* Native Ad */}
+          <NativeAd style={styles.nativeAd} />
+
           <ThemedView style={styles.actionsSection}>
             <Pressable
               style={[
                 styles.actionButton,
                 {
-                  backgroundColor: Platform.OS === 'ios' ? '#F8F9FA' : '#FFFFFF',
-                  borderWidth: Platform.OS === 'ios' ? 2 : 1,
-                  borderColor: Platform.OS === 'ios' ? '#6B7280' : '#000000',
-                  ...(Platform.OS === 'ios' && {
-                    shadowColor: '#000000',
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowOpacity: 0.2,
-                    shadowRadius: 6,
-                  })
+                  backgroundColor: '#FF385C', // Authentic Airbnb coral
+                  borderWidth: 0,
+                  shadowColor: '#FF385C',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 8,
                 }
               ]}
               onPress={handleShare}
             >
-              <IconSymbol name="square.and.arrow.up" size={20} color={Platform.OS === 'ios' ? '#374151' : '#000000'} />
-              <ThemedText style={[styles.actionButtonText, { color: Platform.OS === 'ios' ? '#374151' : '#000000' }]}>Share Fact</ThemedText>
+              <IconSymbol name="square.and.arrow.up" size={20} color="#FFFFFF" />
+              <ThemedText style={[styles.actionButtonText, { color: '#FFFFFF' }]}>Share Fact</ThemedText>
             </Pressable>
 
             {fact.source_url && (
@@ -158,21 +159,19 @@ export function FactDetailModal({ visible, fact, onClose }: FactDetailModalProps
                 style={[
                   styles.actionButton,
                   {
-                    backgroundColor: Platform.OS === 'ios' ? '#EEF2FF' : '#FFFFFF',
-                    borderWidth: Platform.OS === 'ios' ? 2 : 1,
-                    borderColor: Platform.OS === 'ios' ? '#8B5CF6' : '#000000',
-                    ...(Platform.OS === 'ios' && {
-                      shadowColor: '#8B5CF6',
-                      shadowOffset: { width: 0, height: 3 },
-                      shadowOpacity: 0.15,
-                      shadowRadius: 6,
-                    })
+                    backgroundColor: '#FFFFFF',
+                    borderWidth: 1,
+                    borderColor: '#DDDDDD', // Airbnb light border
+                    shadowColor: '#000000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.05,
+                    shadowRadius: 4,
                   }
                 ]}
                 onPress={handleOpenSource}
               >
-                <IconSymbol name="link" size={20} color={Platform.OS === 'ios' ? '#7C3AED' : '#000000'} />
-                <ThemedText style={[styles.actionButtonText, { color: Platform.OS === 'ios' ? '#7C3AED' : '#000000' }]}>
+                <IconSymbol name="link" size={20} color="#000000" />
+                <ThemedText style={[styles.actionButtonText, { color: '#000000' }]}>
                   View Source
                 </ThemedText>
               </Pressable>
@@ -223,9 +222,11 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+    fontWeight: '700',
+    color: '#1F2937',
     marginBottom: 16,
+    letterSpacing: -0.3,
   },
   content: {
     flex: 1,
@@ -251,9 +252,11 @@ const styles = StyleSheet.create({
   },
   factText: {
     fontSize: 18,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
     lineHeight: 26,
-    fontWeight: '500',
+    fontWeight: '400',
     textAlign: 'center',
+    letterSpacing: 0.1,
   },
   detailsSection: {
     backgroundColor: 'transparent',
@@ -261,8 +264,10 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+    fontWeight: '600',
     marginBottom: 16,
+    letterSpacing: -0.2,
   },
   detailRow: {
     flexDirection: 'row',
@@ -283,6 +288,10 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: 16,
     fontWeight: '500',
+  },
+  nativeAd: {
+    marginHorizontal: 0,
+    marginBottom: 20,
   },
   actionsSection: {
     backgroundColor: 'transparent',
@@ -309,7 +318,9 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: 16,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
     fontWeight: '600',
     color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
 });

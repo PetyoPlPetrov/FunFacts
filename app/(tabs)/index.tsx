@@ -8,6 +8,8 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { FunFactCard } from '@/components/fun-fact-card';
 import { FactDetailModal } from '@/components/fact-detail-modal';
+import { BannerAd } from '@/components/ads/banner-ad';
+import { InterstitialAd } from '@/components/ads/interstitial-ad';
 import { factsApi, EnhancedFact } from '@/services/facts-api';
 import { getRandomFunFact, FunFact } from '@/constants/fun-facts';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -20,6 +22,8 @@ export default function HomeScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isViewingHistory, setIsViewingHistory] = useState(false);
+  const [interstitialVisible, setInterstitialVisible] = useState(false);
+  const [factGenerationCount, setFactGenerationCount] = useState(0);
 
   // Computed values
   const currentFact = currentFactIndex >= 0 ? factsHistory[currentFactIndex] : null;
@@ -44,6 +48,15 @@ export default function HomeScreen() {
       setFactsHistory(prev => [...prev, enhancedFact]);
       setCurrentFactIndex(prev => prev + 1);
       setIsViewingHistory(false);
+
+      // Show interstitial ad every 5 facts
+      setFactGenerationCount(prev => {
+        const newCount = prev + 1;
+        if (newCount % 5 === 0) {
+          setTimeout(() => setInterstitialVisible(true), 500); // Small delay for better UX
+        }
+        return newCount;
+      });
     } catch (err) {
       console.error('Error loading fact:', err);
       setError('Failed to load fact. Please try again.');
@@ -57,7 +70,6 @@ export default function HomeScreen() {
         source_url: '',
         language: 'en',
         permalink: '',
-        category: localFact.category,
         isFavorite: false,
         dateDiscovered: new Date().toISOString()
       };
@@ -66,6 +78,15 @@ export default function HomeScreen() {
       setFactsHistory(prev => [...prev, fallbackFact]);
       setCurrentFactIndex(prev => prev + 1);
       setIsViewingHistory(false);
+
+      // Show interstitial ad every 5 facts (including fallback)
+      setFactGenerationCount(prev => {
+        const newCount = prev + 1;
+        if (newCount % 5 === 0) {
+          setTimeout(() => setInterstitialVisible(true), 500);
+        }
+        return newCount;
+      });
     } finally {
       setIsLoading(false);
     }
@@ -108,16 +129,9 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      showsVerticalScrollIndicator={false}
-    >
+    <>
       <LinearGradient
-        colors={colorScheme === 'dark'
-          ? ['#1e3a8a', '#1e40af', '#3b82f6']
-          : ['#dbeafe', '#bfdbfe', '#93c5fd']
-        }
+        colors={['#FFFFFF', '#FFFFFF', '#FFFFFF']}
         style={styles.header}
       >
         <ThemedView style={styles.headerContent}>
@@ -162,12 +176,12 @@ export default function HomeScreen() {
           <Pressable
             style={[
               styles.navButton,
-              { opacity: hasPreviousFact ? 1 : 0.3 }
+              { opacity: hasPreviousFact ? 1 : 0.4 }
             ]}
             onPress={goToPreviousFact}
             disabled={!hasPreviousFact}
           >
-            <IconSymbol name="chevron.left" size={24} color={Platform.OS === 'ios' ? '#2563EB' : '#000000'} />
+            <IconSymbol name="chevron.left" size={20} color="#717171" />
           </Pressable>
 
           <ThemedView style={styles.historyIndicator}>
@@ -179,12 +193,12 @@ export default function HomeScreen() {
           <Pressable
             style={[
               styles.navButton,
-              { opacity: hasNextFact ? 1 : 0.3 }
+              { opacity: hasNextFact ? 1 : 0.4 }
             ]}
             onPress={goToNextFact}
             disabled={!hasNextFact}
           >
-            <IconSymbol name="chevron.right" size={24} color={Platform.OS === 'ios' ? '#2563EB' : '#000000'} />
+            <IconSymbol name="chevron.right" size={20} color="#717171" />
           </Pressable>
         </ThemedView>
       )}
@@ -194,8 +208,13 @@ export default function HomeScreen() {
           style={[
             styles.generateButton,
             {
-              backgroundColor: '#27AE60', // Static green color for iOS compatibility
+              backgroundColor: '#FF385C', // Authentic Airbnb coral
+              borderWidth: 0,
               opacity: isLoading ? 0.6 : 1,
+              shadowColor: '#FF385C',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.15,
+              shadowRadius: 8,
             }
           ]}
           onPress={generateNewFact}
@@ -218,23 +237,21 @@ export default function HomeScreen() {
               styles.generateButton,
               styles.secondaryGenerateButton,
               {
-                backgroundColor: Platform.OS === 'ios' ? '#FEF3C7' : '#FFFFFF',
-                borderWidth: Platform.OS === 'ios' ? 3 : 2,
-                borderColor: Platform.OS === 'ios' ? '#F59E0B' : '#000000',
-                ...(Platform.OS === 'ios' && {
-                  shadowColor: '#F59E0B',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.25,
-                  shadowRadius: 8,
-                })
+                backgroundColor: '#FFFFFF',
+                borderWidth: 1,
+                borderColor: '#DDDDDD', // Airbnb light gray border
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.08,
+                shadowRadius: 4,
               }
             ]}
             onPress={goToLatestFact}
           >
-            <IconSymbol name="arrow.up" size={24} color={Platform.OS === 'ios' ? '#D97706' : '#000000'} />
+            <IconSymbol name="arrow.up" size={24} color="#000000" />
             <Text style={[
               styles.buttonText,
-              { color: Platform.OS === 'ios' ? '#D97706' : '#000000' }
+              { color: '#000000' }
             ]}>
               Back to Latest
             </Text>
@@ -242,35 +259,39 @@ export default function HomeScreen() {
         )}
       </ThemedView>
 
-      <ThemedView style={styles.infoContainer}>
-        <ThemedText style={styles.infoText}>
-          Tap the fact card for detailed information. Use the arrows to browse previous facts!
-        </ThemedText>
-        <ThemedText style={styles.categoriesText}>
-          Facts powered by public API • Navigate through your discovery history
-        </ThemedText>
-      </ThemedView>
+      {/* Banner Ad */}
+      <BannerAd size="medium" />
 
       <FactDetailModal
         visible={modalVisible}
         fact={currentFact}
         onClose={() => setModalVisible(false)}
       />
-    </ScrollView>
+
+      {/* Interstitial Ad */}
+      <InterstitialAd
+        visible={interstitialVisible}
+        onClose={() => setInterstitialVisible(false)}
+        onAdClick={() => {
+          // Optional: handle ad click events
+          console.log('Interstitial ad clicked');
+        }}
+      />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#FFFFFF', // Pure white like Airbnb
   },
   contentContainer: {
     paddingBottom: 50,
   },
   header: {
-    marginTop: 150,
-    paddingTop: 40,
+    marginTop: 100,
+    //paddingTop: 40,
     paddingBottom: 30,
     paddingHorizontal: 20,
   },
@@ -280,30 +301,36 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 36,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
     textAlign: 'center',
     marginBottom: 8,
-    color: '#FFFFFF',
+    color: '#000000', // Pure black like Airbnb
     marginTop: 10,
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+    fontWeight: '400',
     textAlign: 'center',
-    opacity: 0.9,
     marginBottom: 20,
-    color: '#FFFFFF',
+    color: '#717171', // Airbnb gray for secondary text
+    letterSpacing: 0.2,
   },
   statsContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 15,
+    backgroundColor: '#F7F7F7', // Airbnb light gray
+    borderRadius: 12,
     paddingVertical: 8,
     paddingHorizontal: 16,
     alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: '#EBEBEB',
   },
   statsText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#000000', // Black like Airbnb
   },
   cardContainer: {
     paddingTop: 20,
@@ -332,8 +359,10 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 18,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
     fontWeight: '600',
     color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
   infoContainer: {
     paddingHorizontal: 20,
@@ -342,10 +371,13 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 16,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+    fontWeight: '400',
     textAlign: 'center',
     opacity: 0.7,
     marginBottom: 16,
     lineHeight: 22,
+    letterSpacing: 0.1,
   },
   categoriesText: {
     fontSize: 14,
@@ -399,43 +431,39 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   navButton: {
-    backgroundColor: Platform.OS === 'ios' ? '#DBEAFE' : '#FFFFFF',
-    borderRadius: 25,
-    width: 50,
-    height: 50,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 50,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: Platform.OS === 'ios' ? 2 : 1,
-    borderColor: Platform.OS === 'ios' ? '#3B82F6' : '#000000',
+    borderWidth: 1,
+    borderColor: '#DDDDDD', // Airbnb light border
     shadowOffset: {
       width: 0,
-      height: Platform.OS === 'ios' ? 4 : 2,
+      height: 1,
     },
-    shadowOpacity: Platform.OS === 'ios' ? 0.2 : 0.1,
-    shadowRadius: Platform.OS === 'ios' ? 6 : 4,
-    elevation: 3,
-    ...(Platform.OS === 'ios' && {
-      shadowColor: '#3B82F6',
-    })
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    shadowColor: '#000000',
   },
   historyIndicator: {
-    backgroundColor: Platform.OS === 'ios' ? '#DBEAFE' : '#FFFFFF',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 15,
+    paddingVertical: 10,
+    borderRadius: 24,
     marginHorizontal: 20,
-    borderWidth: Platform.OS === 'ios' ? 2 : 1,
-    borderColor: Platform.OS === 'ios' ? '#3B82F6' : '#000000',
+    borderWidth: 1,
+    borderColor: '#DDDDDD', // Airbnb light border
     shadowOffset: {
       width: 0,
-      height: Platform.OS === 'ios' ? 3 : 2,
+      height: 1,
     },
-    shadowOpacity: Platform.OS === 'ios' ? 0.15 : 0.1,
-    shadowRadius: Platform.OS === 'ios' ? 5 : 4,
-    elevation: 3,
-    ...(Platform.OS === 'ios' && {
-      shadowColor: '#3B82F6',
-    })
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    shadowColor: '#000000',
   },
   historyText: {
     fontSize: 14,

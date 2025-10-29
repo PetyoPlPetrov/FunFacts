@@ -62,10 +62,8 @@ export function FunFactCard({ funFact, onPress, isLoading = false }: FunFactCard
       <ThemedView style={[
         styles.card,
         {
-          backgroundColor: colorScheme === 'dark'
-            ? Colors.dark.background
-            : Colors.light.background,
-          shadowColor: colorScheme === 'dark' ? '#000' : '#000',
+          backgroundColor: '#FFFFFF', // Always white for Airbnb aesthetic
+          shadowColor: '#000',
         }
       ]}>
 
@@ -75,7 +73,7 @@ export function FunFactCard({ funFact, onPress, isLoading = false }: FunFactCard
 
         {!isLoading && (
           <ThemedView style={styles.tapHint}>
-            <IconSymbol name="info.circle" size={16} color={Platform.OS === 'ios' ? '#6B7280' : '#000000'} />
+            <IconSymbol name="info.circle" size={16} color="#9CA3AF" />
             <ThemedText style={styles.tapHintText}>
               Tap for more details
             </ThemedText>
@@ -89,31 +87,45 @@ export function FunFactCard({ funFact, onPress, isLoading = false }: FunFactCard
 const styles = StyleSheet.create({
   container: {
     marginHorizontal: 20,
-    marginVertical: 10,
+    marginVertical: 16,
   },
   card: {
-    borderRadius: 20,
+    borderRadius: 12,
     padding: 24,
-    shadowOffset: {
-      width: 0,
-      height: Platform.OS === 'ios' ? 10 : 8,
-    },
-    shadowOpacity: Platform.OS === 'ios' ? 0.15 : 0.1,
-    shadowRadius: Platform.OS === 'ios' ? 20 : 16,
-    elevation: 12,
-    borderWidth: Platform.OS === 'ios' ? 2 : 1,
-    borderColor: Platform.OS === 'ios' ? '#10B981' : '#000000',
-    backgroundColor: Platform.OS === 'ios' ? '#ECFDF5' : '#FFFFFF',
-    ...(Platform.OS === 'ios' && {
-      shadowColor: '#10B981',
-    })
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.12)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000000',
+        shadowOffset: {
+          width: 0,
+          height: 8,
+        },
+        shadowOpacity: 0.2,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 12,
+        shadowColor: '#000000',
+        shadowOffset: {
+          width: 0,
+          height: 12,
+        },
+        shadowOpacity: 0.15,
+        shadowRadius: 32,
+      },
+    }),
   },
   factText: {
     fontSize: 18,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
     lineHeight: 26,
-    fontWeight: '500',
+    fontWeight: '400',
     textAlign: 'left',
     marginBottom: 12,
+    letterSpacing: 0.1,
+    color: '#000000', // Pure black for maximum readability
   },
   tapHint: {
     backgroundColor: 'transparent',
@@ -123,15 +135,17 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 15,
-    backgroundColor: Platform.OS === 'ios' ? 'rgba(249, 250, 251, 0.8)' : 'rgba(255,255,255,0.8)',
-    borderWidth: Platform.OS === 'ios' ? 1 : 1,
-    borderColor: Platform.OS === 'ios' ? '#D1D5DB' : '#000000',
+    borderRadius: 20,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.06)',
   },
   tapHintText: {
     fontSize: 13,
-    fontWeight: '600',
-    opacity: 0.8,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+    fontWeight: '500',
+    color: '#717171', // Airbnb secondary gray
     fontStyle: 'italic',
+    letterSpacing: 0.1,
   },
 });
