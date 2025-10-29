@@ -217,7 +217,10 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
                 color={gameFact.isTrue ? "#10B981" : "#EF4444"}
               />
               <ThemedText style={styles.answerText}>
-                This fact is <Text style={{ fontWeight: 'bold' }}>
+                This fact is <Text style={{
+                  fontWeight: 'bold',
+                  color: gameFact.isTrue ? '#10B981' : '#EF4444'
+                }}>
                   {gameFact.isTrue ? 'TRUE' : 'FALSE'}
                 </Text>
               </ThemedText>
