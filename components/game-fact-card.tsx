@@ -5,6 +5,8 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withSequence,
+  withRepeat,
+  withTiming,
   runOnJS
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -36,15 +38,22 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
 
   const scale = useSharedValue(1);
   const cardOpacity = useSharedValue(1);
+  const tapHintOpacity = useSharedValue(1);
+  const tapHintScale = useSharedValue(1);
 
   // Reset state when a new fact is loaded or force revealed state
   React.useEffect(() => {
     if (forceRevealed || isFactAnswered) {
       setAnswerState('revealed');
       setShowExplanation(true);
+      // Start tap hint animation
+      startTapHintAnimation();
     } else {
       setAnswerState('waiting');
       setShowExplanation(false);
+      // Reset tap hint animation
+      tapHintOpacity.value = 1;
+      tapHintScale.value = 1;
     }
   }, [gameFact.id, forceRevealed, isFactAnswered]); // Reset when fact ID changes, forceRevealed changes, or answered state changes
 
@@ -52,6 +61,32 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
     transform: [{ scale: scale.value }],
     opacity: cardOpacity.value,
   }));
+
+  const tapHintAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: tapHintOpacity.value,
+    transform: [{ scale: tapHintScale.value }],
+  }));
+
+  const startTapHintAnimation = () => {
+    // Start a quick, subtle blinking and scaling animation to attract attention
+    tapHintOpacity.value = withRepeat(
+      withSequence(
+        withTiming(0.4, { duration: 250 }),
+        withTiming(1, { duration: 250 })
+      ),
+      1, // Repeat 2 times (1 second total)
+      false
+    );
+
+    tapHintScale.value = withRepeat(
+      withSequence(
+        withSpring(1.05, { duration: 250 }),
+        withSpring(1, { duration: 250 })
+      ),
+      1, // Repeat 2 times (1 second total)
+      false
+    );
+  };
 
   const handleAnswer = async (userGuess: boolean) => {
     if (disabled || isLoading || answerState !== 'waiting' || forceRevealed || isFactAnswered) return;
@@ -74,6 +109,8 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
     setTimeout(() => {
       setShowExplanation(true);
       setAnswerState('revealed');
+      // Start tap hint animation when explanation is shown
+      startTapHintAnimation();
     }, 1500);
 
     // Notify parent component
@@ -110,7 +147,7 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
     <AnimatedPressable style={[styles.container, animatedStyle]}>
       <Pressable
         onPress={onPress}
-        disabled={isLoading || !onPress}
+        disabled={isLoading || !onPress || answerState === 'waiting'}
         style={[
           styles.card,
           {
@@ -197,12 +234,12 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
 
             {/* Show tap hint only after answer is revealed */}
             {onPress && (
-              <ThemedView style={styles.tapHint}>
+              <Animated.View style={[styles.tapHint, tapHintAnimatedStyle]}>
                 <IconSymbol name="info.circle" size={16} color="#9CA3AF" />
                 <ThemedText style={styles.tapHintText}>
                   Tap for details & sharing
                 </ThemedText>
-              </ThemedView>
+              </Animated.View>
             )}
           </ThemedView>
         )}

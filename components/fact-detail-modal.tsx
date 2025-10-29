@@ -130,6 +130,16 @@ export function FactDetailModal({ visible, fact, onClose }: FactDetailModalProps
                 </ThemedView>
               </ThemedView>
             )}
+
+            {/* Attribution for Open Trivia Database */}
+            {fact.source_url === 'https://opentdb.com/' && (
+              <ThemedView style={styles.attributionContainer}>
+                <IconSymbol name="info.circle" size={16} color="#9CA3AF" />
+                <ThemedText style={styles.attributionText}>
+                  Licensed under Creative Commons BY-SA 4.0 • Data from Open Trivia Database
+                </ThemedText>
+              </ThemedView>
+            )}
           </ThemedView>
 
           {/* Native Ad */}
@@ -288,6 +298,23 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: 16,
     fontWeight: '500',
+  },
+  attributionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginTop: 12,
+    gap: 8,
+  },
+  attributionText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontStyle: 'italic',
+    flex: 1,
+    lineHeight: 16,
   },
   nativeAd: {
     marginHorizontal: 0,

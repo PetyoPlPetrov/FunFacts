@@ -24,7 +24,8 @@ export interface GameFact {
   isAnswered?: boolean; // Track if this fact has been answered
 }
 
-import { falseFactsApi, FalseFact } from './false-facts-api';
+import { triviaApi, TriviaQuestion } from './trivia-api';
+import { falseFactsApi } from './false-facts-api';
 
 class FactsApiService {
   private baseUrl = 'https://uselessfacts.jsph.pl/api/v2';
@@ -88,13 +89,27 @@ class FactsApiService {
   }
 
   /**
-   * Get a random fact for the guessing game (true or false)
+   * Get a random fact for the guessing game (from trivia API)
    */
   async getRandomGameFact(): Promise<GameFact> {
-    const isTrue = Math.random() > 0.5; // 50/50 chance for true or false
+    try {
+      // Try to get a trivia question first (provides both true and false)
+      const triviaQuestion = await triviaApi.getRandomTrueFalseQuestion();
+      const isTrue = triviaQuestion.correct_answer === 'True';
 
-    if (isTrue) {
-      // Get a real fact
+      return {
+        id: `trivia-${Date.now()}-${Math.random()}`,
+        text: triviaApi.decodeHtmlEntities(triviaQuestion.question),
+        source: `${triviaQuestion.category} (${triviaQuestion.difficulty})`,
+        source_url: 'https://opentdb.com/',
+        isTrue: isTrue,
+        category: triviaQuestion.category,
+        dateDiscovered: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Trivia API failed, falling back to useless facts:', error);
+
+      // Fallback to useless facts API (always true)
       try {
         const realFact = await this.getRandomFact();
         return {
@@ -105,13 +120,10 @@ class FactsApiService {
           isTrue: true,
           dateDiscovered: new Date().toISOString()
         };
-      } catch (error) {
-        // Fallback to false fact if API fails
+      } catch (secondError) {
+        // Final fallback to local false fact
         return this.getFalseGameFact();
       }
-    } else {
-      // Get a false fact
-      return this.getFalseGameFact();
     }
   }
 
