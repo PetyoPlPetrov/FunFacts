@@ -10,7 +10,7 @@ interface InterstitialAdProps {
   onAdClick?: () => void;
 }
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 // Mock interstitial ad data
 const mockInterstitialAds = [
@@ -22,7 +22,7 @@ const mockInterstitialAds = [
     ctaText: 'Book Now',
     closeDelay: 5, // seconds before close button appears
     backgroundImage: '🏝️',
-    colors: ['#FF5A5F', '#FF385C', '#E31C5F'],
+    colors: ['#FF5A5F', '#FF385C', '#E31C5F'] as const,
   },
   {
     id: '2',
@@ -32,7 +32,7 @@ const mockInterstitialAds = [
     ctaText: 'Start Learning',
     closeDelay: 5,
     backgroundImage: '🎓',
-    colors: ['#00A699', '#20B2AA', '#48D1CC'],
+    colors: ['#00A699', '#20B2AA', '#48D1CC'] as const,
   },
   {
     id: '3',
@@ -42,9 +42,9 @@ const mockInterstitialAds = [
     ctaText: 'Order Food',
     closeDelay: 5,
     backgroundImage: '🍕',
-    colors: ['#767676', '#484848', '#6B7280'],
+    colors: ['#767676', '#484848', '#6B7280'] as const,
   }
-];
+] as const;
 
 export function InterstitialAd({ visible, onClose, onAdClick }: InterstitialAdProps) {
   const [showCloseButton, setShowCloseButton] = React.useState(false);
@@ -76,15 +76,15 @@ export function InterstitialAd({ visible, onClose, onAdClick }: InterstitialAdPr
     }
   }, [visible, ad.closeDelay]);
 
-  const handleAdClick = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  const handleAdClick = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     console.log(`Mock interstitial ad clicked: ${ad.title}`);
     onAdClick?.();
     // In real implementation, this would track ad clicks and open ad destination
   };
 
-  const handleClose = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const handleClose = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onClose();
   };
 

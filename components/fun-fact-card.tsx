@@ -57,7 +57,6 @@ export function FunFactCard({ funFact, onPress, isLoading = false }: FunFactCard
     <AnimatedPressable
       style={[styles.container, animatedStyle]}
       onPress={handlePress}
-      activeOpacity={0.8}
     >
       <ThemedView style={[
         styles.card,
@@ -128,7 +127,7 @@ const styles = StyleSheet.create({
     color: '#000000', // Pure black for maximum readability
   },
   tapHint: {
-    backgroundColor: 'transparent',
+    backgroundColor: '#F9FAFB',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -136,7 +135,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 20,
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
     borderColor: 'rgba(0, 0, 0, 0.06)',
   },
