@@ -7,7 +7,6 @@ import {
   Share,
   Alert,
   Linking,
-  Dimensions,
   Platform
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,8 +16,6 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { EnhancedFact } from '@/services/facts-api';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { NativeAd } from '@/components/ads/native-ad';
 
 interface FactDetailModalProps {
@@ -27,10 +24,8 @@ interface FactDetailModalProps {
   onClose: () => void;
 }
 
-const { width, height } = Dimensions.get('window');
 
 export function FactDetailModal({ visible, fact, onClose }: FactDetailModalProps) {
-  const colorScheme = useColorScheme();
 
   // Use the accessible color utility functions
 

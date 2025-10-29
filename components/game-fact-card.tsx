@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Pressable, Platform, View, Text } from 'react-native';
+import { StyleSheet, Pressable, Platform, Text } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -7,7 +7,6 @@ import Animated, {
   withSequence,
   withRepeat,
   withTiming,
-  runOnJS
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
@@ -15,7 +14,6 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { GameFact } from '@/services/facts-api';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 interface GameFactCardProps {
   gameFact: GameFact;
@@ -32,7 +30,6 @@ type AnswerState = 'waiting' | 'correct' | 'incorrect' | 'revealed';
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, disabled = false, forceRevealed = false, isFactAnswered = false }: GameFactCardProps) {
-  const colorScheme = useColorScheme();
   const [answerState, setAnswerState] = useState<AnswerState>('waiting');
   const [showExplanation, setShowExplanation] = useState(false);
 

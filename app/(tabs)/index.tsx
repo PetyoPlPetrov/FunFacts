@@ -1,27 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator, Text, Platform } from 'react-native';
+import { StyleSheet, Pressable, ActivityIndicator, Text, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { FunFactCard } from '@/components/fun-fact-card';
 import { GameFactCard } from '@/components/game-fact-card';
 import { FactDetailModal } from '@/components/fact-detail-modal';
 import { BannerAd } from '@/components/ads/banner-ad';
 import { InterstitialAd } from '@/components/ads/interstitial-ad';
 import { factsApi, EnhancedFact, GameFact } from '@/services/facts-api';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function HomeScreen() {
-  const colorScheme = useColorScheme();
-  const [factsHistory, setFactsHistory] = useState<EnhancedFact[]>([]);
+  const [, setFactsHistory] = useState<EnhancedFact[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [interstitialVisible, setInterstitialVisible] = useState(false);
-  const [factGenerationCount, setFactGenerationCount] = useState(0);
+  const [, setFactGenerationCount] = useState(0);
 
   // Unified guessing game states
   const [gameFactsHistory, setGameFactsHistory] = useState<GameFact[]>([]);
@@ -320,13 +317,6 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF', // Pure white like Airbnb
-  },
-  contentContainer: {
-    paddingBottom: 50,
-  },
   header: {
     marginTop: 100,
     //paddingTop: 40,

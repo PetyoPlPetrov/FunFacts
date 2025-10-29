@@ -9,8 +9,6 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { FunFact } from '@/constants/fun-facts';
 import { EnhancedFact } from '@/services/facts-api';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 interface FunFactCardProps {
   funFact: FunFact | EnhancedFact;
@@ -21,7 +19,6 @@ interface FunFactCardProps {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export function FunFactCard({ funFact, onPress, isLoading = false }: FunFactCardProps) {
-  const colorScheme = useColorScheme();
   const scale = useSharedValue(1);
   const rotation = useSharedValue(0);
 
