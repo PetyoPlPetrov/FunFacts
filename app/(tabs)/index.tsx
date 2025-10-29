@@ -12,7 +12,6 @@ import { FactDetailModal } from '@/components/fact-detail-modal';
 import { BannerAd } from '@/components/ads/banner-ad';
 import { InterstitialAd } from '@/components/ads/interstitial-ad';
 import { factsApi, EnhancedFact, GameFact } from '@/services/facts-api';
-import { getRandomFunFact, FunFact } from '@/constants/fun-facts';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function HomeScreen() {
@@ -91,8 +90,12 @@ export default function HomeScreen() {
   const goToPreviousGameFact = () => {
     if (hasPreviousGameFact) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setCurrentGameFactIndex(prev => prev - 1);
-      setHasAnswered(true); // Previous facts were already answered
+      setCurrentGameFactIndex(prev => {
+        const newIndex = prev - 1;
+        const targetFact = gameFactsHistory[newIndex];
+        setHasAnswered(targetFact?.isAnswered || false);
+        return newIndex;
+      });
     }
   };
 
@@ -101,7 +104,8 @@ export default function HomeScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setCurrentGameFactIndex(prev => {
         const newIndex = prev + 1;
-        setHasAnswered(newIndex < gameFactsHistory.length - 1); // Only latest fact can be answered
+        const targetFact = gameFactsHistory[newIndex];
+        setHasAnswered(targetFact?.isAnswered || false);
         return newIndex;
       });
     }
@@ -110,8 +114,10 @@ export default function HomeScreen() {
   const goToLatestGameFact = () => {
     if (gameFactsHistory.length > 0) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      setCurrentGameFactIndex(gameFactsHistory.length - 1);
-      setHasAnswered(false); // Latest fact can be answered if not yet answered
+      const latestIndex = gameFactsHistory.length - 1;
+      setCurrentGameFactIndex(latestIndex);
+      const latestFact = gameFactsHistory[latestIndex];
+      setHasAnswered(latestFact?.isAnswered || false);
     }
   };
 
@@ -129,13 +135,22 @@ export default function HomeScreen() {
       total: prev.total + 1
     }));
 
-    setHasAnswered(true);
-
-    // Add to regular facts history for browsing
+    // Mark current fact as answered in the game facts history
     if (currentGameFact) {
+      setGameFactsHistory(prev =>
+        prev.map((fact, index) =>
+          index === currentGameFactIndex
+            ? { ...fact, isAnswered: true }
+            : fact
+        )
+      );
+
+      // Add to regular facts history for browsing
       const enhancedFact = factsApi.gameFactToEnhanced(currentGameFact);
       setFactsHistory(prev => [...prev, enhancedFact]);
     }
+
+    setHasAnswered(true);
   };
 
   return (
@@ -181,6 +196,8 @@ export default function HomeScreen() {
             onPress={openFactModal}
             isLoading={isLoading}
             disabled={hasAnswered}
+            forceRevealed={isViewingGameHistory}
+            isFactAnswered={currentGameFact.isAnswered || false}
           />
         ) : (
           <ThemedView style={styles.loadingCard}>

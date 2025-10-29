@@ -21,6 +21,7 @@ export interface GameFact {
   explanation?: string; // For false facts, explains why it's false
   category?: string;
   dateDiscovered?: string;
+  isAnswered?: boolean; // Track if this fact has been answered
 }
 
 import { falseFactsApi, FalseFact } from './false-facts-api';

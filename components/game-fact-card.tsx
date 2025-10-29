@@ -21,13 +21,15 @@ interface GameFactCardProps {
   onPress?: () => void;
   isLoading?: boolean;
   disabled?: boolean;
+  forceRevealed?: boolean; // Force the card to show in revealed state (for history)
+  isFactAnswered?: boolean; // Whether this specific fact has been answered
 }
 
 type AnswerState = 'waiting' | 'correct' | 'incorrect' | 'revealed';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, disabled = false }: GameFactCardProps) {
+export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, disabled = false, forceRevealed = false, isFactAnswered = false }: GameFactCardProps) {
   const colorScheme = useColorScheme();
   const [answerState, setAnswerState] = useState<AnswerState>('waiting');
   const [showExplanation, setShowExplanation] = useState(false);
@@ -35,11 +37,16 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
   const scale = useSharedValue(1);
   const cardOpacity = useSharedValue(1);
 
-  // Reset state when a new fact is loaded
+  // Reset state when a new fact is loaded or force revealed state
   React.useEffect(() => {
-    setAnswerState('waiting');
-    setShowExplanation(false);
-  }, [gameFact.id]); // Reset when fact ID changes
+    if (forceRevealed || isFactAnswered) {
+      setAnswerState('revealed');
+      setShowExplanation(true);
+    } else {
+      setAnswerState('waiting');
+      setShowExplanation(false);
+    }
+  }, [gameFact.id, forceRevealed, isFactAnswered]); // Reset when fact ID changes, forceRevealed changes, or answered state changes
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -47,7 +54,7 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
   }));
 
   const handleAnswer = async (userGuess: boolean) => {
-    if (disabled || isLoading || answerState !== 'waiting') return;
+    if (disabled || isLoading || answerState !== 'waiting' || forceRevealed || isFactAnswered) return;
 
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
@@ -101,28 +108,23 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
 
   return (
     <AnimatedPressable style={[styles.container, animatedStyle]}>
-      <ThemedView style={[
-        styles.card,
-        {
-          backgroundColor: getCardBackgroundColor(),
-          borderColor: getCardBorderColor(),
-        }
-      ]}>
-        <Pressable onPress={onPress} disabled={isLoading || !onPress}>
+      <Pressable
+        onPress={onPress}
+        disabled={isLoading || !onPress}
+        style={[
+          styles.card,
+          {
+            backgroundColor: getCardBackgroundColor(),
+            borderColor: getCardBorderColor(),
+          }
+        ]}
+      >
+        <ThemedView style={styles.cardContent}>
           <ThemedText style={styles.factText}>
             {isLoading ? 'Loading amazing fact...' : gameFact.text}
           </ThemedText>
-          {!isLoading && onPress && (
-            <ThemedView style={styles.tapHint}>
-              <IconSymbol name="info.circle" size={16} color="#9CA3AF" />
-              <ThemedText style={styles.tapHintText}>
-                Tap for details & sharing
-              </ThemedText>
-            </ThemedView>
-          )}
-        </Pressable>
 
-        {answerState === 'waiting' && !isLoading && (
+          {answerState === 'waiting' && !isLoading && !forceRevealed && !isFactAnswered && (
           <ThemedView style={styles.gameControls}>
             <ThemedText style={styles.promptText}>
               Is this fact true or false?
@@ -192,9 +194,20 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
                 {gameFact.explanation}
               </ThemedText>
             )}
+
+            {/* Show tap hint only after answer is revealed */}
+            {onPress && (
+              <ThemedView style={styles.tapHint}>
+                <IconSymbol name="info.circle" size={16} color="#9CA3AF" />
+                <ThemedText style={styles.tapHintText}>
+                  Tap for details & sharing
+                </ThemedText>
+              </ThemedView>
+            )}
           </ThemedView>
         )}
-      </ThemedView>
+        </ThemedView>
+      </Pressable>
     </AnimatedPressable>
   );
 }
@@ -222,6 +235,9 @@ const styles = StyleSheet.create({
         elevation: 8,
       },
     }),
+  },
+  cardContent: {
+    backgroundColor: 'transparent',
   },
   factText: {
     fontSize: 18,
