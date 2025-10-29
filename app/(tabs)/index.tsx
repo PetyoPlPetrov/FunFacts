@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Pressable, ActivityIndicator, Text, Platform } from 'react-native';
+import {StyleSheet, Pressable, ActivityIndicator, Text, Platform, ScrollView} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -151,7 +151,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <>
+    <ScrollView>
       <LinearGradient
         colors={['#FFFFFF', '#FFFFFF', '#FFFFFF']}
         style={styles.header}
@@ -163,14 +163,42 @@ export default function HomeScreen() {
           </ThemedText>
 
           <ThemedView style={styles.statsRow}>
-            <ThemedView style={styles.statsContainer}>
-              <ThemedText style={styles.statsText}>
-                Score: {totalScore.correct}/{totalScore.total}
-                {totalScore.total > 0 && ` (${Math.round((totalScore.correct / totalScore.total) * 100)}%)`}
-              </ThemedText>
+            <ThemedView style={styles.scoreContainerWrapper}>
+              <LinearGradient
+                colors={
+                  totalScore.total > 0
+                    ? [
+                        '#10B981', // Green
+                        '#10B981', // Green
+                        '#EF4444', // Red
+                        '#EF4444'  // Red
+                      ]
+                    : ['#EBEBEB', '#EBEBEB'] // Default gray when no answers
+                }
+                locations={
+                  totalScore.total > 0
+                    ? [
+                        0,
+                        totalScore.correct / totalScore.total,
+                        totalScore.correct / totalScore.total,
+                        1
+                      ]
+                    : [0, 1]
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.scoreGradientBorder}
+              >
+                <ThemedView style={styles.statsContainer}>
+                  <Text style={styles.statsText}>
+                    Score: {totalScore.correct}/{totalScore.total}
+                    {totalScore.total > 0 && ` (${Math.round((totalScore.correct / totalScore.total) * 100)}%)`}
+                  </Text>
+                </ThemedView>
+              </LinearGradient>
             </ThemedView>
 
-            <ThemedView style={styles.statsContainer}>
+            <ThemedView style={[styles.statsContainer, styles.factsContainer]}>
               <ThemedText style={styles.statsText}>
                 Facts: {totalGameFacts}
               </ThemedText>
@@ -312,7 +340,7 @@ export default function HomeScreen() {
           console.log('Interstitial ad clicked');
         }}
       />
-    </>
+    </ScrollView>
   );
 }
 
@@ -352,19 +380,34 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     backgroundColor: 'transparent',
   },
+  scoreContainerWrapper: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  scoreGradientBorder: {
+    borderRadius: 12,
+    padding: 2, // This creates the border thickness
+    minHeight: 44, // Ensure minimum height
+  },
   statsContainer: {
     backgroundColor: '#F7F7F7', // Airbnb light gray
-    borderRadius: 12,
+    borderRadius: 10, // Slightly smaller to account for gradient border
     paddingVertical: 8,
     paddingHorizontal: 16,
+    flex: 1,
+    minHeight: 40, // Ensure the content has proper height
+    justifyContent: 'center', // Center the text vertically
+  },
+  factsContainer: {
     borderWidth: 1,
     borderColor: '#EBEBEB',
-    flex: 1,
+    borderRadius: 12, // Back to original radius for facts container
   },
   statsText: {
     fontSize: 14,
     fontWeight: '600',
     color: '#000000', // Black like Airbnb
+    textAlign: 'center',
   },
   cardContainer: {
     paddingTop: 20,
