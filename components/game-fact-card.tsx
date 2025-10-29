@@ -32,6 +32,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, disabled = false, forceRevealed = false, isFactAnswered = false }: GameFactCardProps) {
   const [answerState, setAnswerState] = useState<AnswerState>('waiting');
   const [showExplanation, setShowExplanation] = useState(false);
+  const [wasGuessCorrect, setWasGuessCorrect] = useState<boolean | null>(null);
 
   const scale = useSharedValue(1);
   const cardOpacity = useSharedValue(1);
@@ -43,11 +44,13 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
     if (forceRevealed || isFactAnswered) {
       setAnswerState('revealed');
       setShowExplanation(true);
+      setWasGuessCorrect(null); // No guess made, so no correctness to show
       // Start tap hint animation
       startTapHintAnimation();
     } else {
       setAnswerState('waiting');
       setShowExplanation(false);
+      setWasGuessCorrect(null);
       // Reset tap hint animation
       tapHintOpacity.value = 1;
       tapHintScale.value = 1;
@@ -91,6 +94,7 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     const isCorrect = userGuess === gameFact.isTrue;
+    setWasGuessCorrect(isCorrect);
 
     // Animation feedback
     scale.value = withSequence(
@@ -190,34 +194,23 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
           </ThemedView>
         )}
 
-        {answerState === 'correct' && (
-          <ThemedView style={styles.resultContainer}>
-            <IconSymbol name="checkmark.circle.fill" size={32} color="#10B981" />
-            <ThemedText style={[styles.resultText, { color: '#065F46' }]}>
-              Correct! 🎉
-            </ThemedText>
-          </ThemedView>
-        )}
-
-        {answerState === 'incorrect' && (
-          <ThemedView style={styles.resultContainer}>
-            <IconSymbol name="xmark.circle.fill" size={32} color="#EF4444" />
-            <ThemedText style={[styles.resultText, { color: '#991B1B' }]}>
-              Incorrect! 😅
-            </ThemedText>
-          </ThemedView>
-        )}
 
         {showExplanation && answerState === 'revealed' && (
           <ThemedView style={styles.explanationContainer}>
             <ThemedView style={styles.answerReveal}>
               <IconSymbol
-                name={gameFact.isTrue ? "checkmark.circle.fill" : "xmark.circle.fill"}
-                size={20}
-                color={gameFact.isTrue ? "#10B981" : "#EF4444"}
+                name={wasGuessCorrect !== null
+                  ? (wasGuessCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
+                  : (gameFact.isTrue ? "checkmark.circle.fill" : "xmark.circle.fill")
+                }
+                size={32}
+                color={wasGuessCorrect !== null
+                  ? (wasGuessCorrect ? "#10B981" : "#EF4444")
+                  : (gameFact.isTrue ? "#10B981" : "#EF4444")
+                }
               />
               <ThemedText style={styles.answerText}>
-                This fact is <Text style={{
+                The fact is <Text style={{
                   fontWeight: 'bold',
                   color: gameFact.isTrue ? '#10B981' : '#EF4444'
                 }}>
