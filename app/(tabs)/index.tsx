@@ -88,7 +88,7 @@ export default function HomeScreen() {
       // Show interstitial ad every 4 facts
       setFactGenerationCount(prev => {
         const newCount = prev + 1;
-        if (newCount % 12 === 0) {
+        if (newCount % 4 === 0) {
           setTimeout(() => setInterstitialVisible(true), 300);
         }
         return newCount;
@@ -97,7 +97,7 @@ export default function HomeScreen() {
       if (__DEV__) {
         console.error('Error loading game fact:', err);
       }
-      setError('Failed to load fact. Please try again.');
+     // setError('Failed to load fact. Please try again.');
 
       // Fallback to false fact
       const falseFact = factsApi.getFalseGameFact();
@@ -107,6 +107,7 @@ export default function HomeScreen() {
         setCurrentGameFactIndex(gameFactsHistory.length - 1);
       }
 
+      // Show interstitial ad every 4 facts (fallback case)
       setFactGenerationCount(prev => {
         const newCount = prev + 1;
         if (newCount % 4 === 0) {

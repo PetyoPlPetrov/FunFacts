@@ -18,10 +18,10 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
-
+.claude
 # Metro
 .metro-health-check*
-
+Claude.md
 # debug
 npm-debug.*
 yarn-debug.*

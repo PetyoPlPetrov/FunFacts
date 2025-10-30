@@ -1,5 +1,4 @@
 import { falseFactsApi } from './false-facts-api';
-import { triviaApi } from './trivia-api';
 
 export interface ApiFact {
   id: string;
@@ -31,21 +30,61 @@ export interface GameFact {
 
 class FactsApiService {
   private baseUrl = 'https://uselessfacts.jsph.pl/api/v2';
+  private isFirstLoad = true;
 
-  async getRandomFact(): Promise<ApiFact> {
-    try {
-      const response = await fetch(`${this.baseUrl}/facts/random`);
-      if (!response.ok ) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+  /**
+   * Sleep helper for delays
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Fetch with retry logic
+   */
+  async getRandomFact(retryCount = 3): Promise<ApiFact> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= retryCount; attempt++) {
+      try {
+        // Add delay on first load to let network initialize
+        if (this.isFirstLoad && attempt === 1) {
+          await this.sleep(500);
+        }
+
+        const response = await fetch(`${this.baseUrl}/facts/random`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        this.isFirstLoad = false; // Mark first load as complete
+        return data;
+      } catch (error) {
+        lastError = error as Error;
+
+        if (__DEV__) {
+          console.warn(`[FactsAPI] Attempt ${attempt}/${retryCount} failed:`, error);
+        }
+
+        // Wait before retrying (exponential backoff)
+        if (attempt < retryCount) {
+          await this.sleep(attempt * 500);
+        }
       }
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      if (__DEV__) {
-        console.error('Error fetching random fact:', error);
-      }
-      throw error;
     }
+
+    // All retries failed
+    if (__DEV__) {
+      console.error('[FactsAPI] All retry attempts failed:', lastError);
+    }
+    throw lastError || new Error('Failed to fetch fact');
   }
 
   async getFactById(id: string): Promise<ApiFact> {
@@ -97,31 +136,20 @@ class FactsApiService {
   }
 
   /**
-   * Get a random fact for the guessing game (from trivia API)
+   * Get a random fact for the guessing game
+   * Randomly decides between fetching a true fact from API or using a false fact from local collection
    */
   async getRandomGameFact(): Promise<GameFact> {
-    try {
-      // Try to get a trivia question first (provides both true and false)
-      const triviaQuestion = await triviaApi.getRandomTrueFalseQuestion();
-      const isTrue = triviaQuestion.correct_answer === 'True';
+    // 50/50 chance: true fact from API or false fact from local
+    const shouldFetchTrue = Math.random() < 0.5;
 
-      return {
-        id: `trivia-${Date.now()}-${Math.random()}`,
-        text: triviaApi.decodeHtmlEntities(triviaQuestion.question),
-        source: `${triviaQuestion.category} (${triviaQuestion.difficulty})`,
-        source_url: 'https://opentdb.com/',
-        isTrue: isTrue,
-        category: triviaQuestion.category,
-        dateDiscovered: new Date().toISOString()
-      };
-    } catch (error) {
-      if (__DEV__) {
-        console.error('Trivia API failed, falling back to useless facts:', error);
-      }
-
-      // Fallback to useless facts API (always true)
+    if (shouldFetchTrue) {
+      // Try to fetch a true fact from API
       try {
         const realFact = await this.getRandomFact();
+        if (__DEV__) {
+          console.log('[FactsAPI] Fetched true fact from API');
+        }
         return {
           id: realFact.id,
           text: realFact.text,
@@ -130,10 +158,19 @@ class FactsApiService {
           isTrue: true,
           dateDiscovered: new Date().toISOString()
         };
-      } catch (secondError) {
-        // Final fallback to local false fact
+      } catch (error) {
+        // If API fails, fallback to false fact
+        if (__DEV__) {
+          console.warn('[FactsAPI] API failed, using false fact instead');
+        }
         return this.getFalseGameFact();
       }
+    } else {
+      // Use local false fact
+      if (__DEV__) {
+        console.log('[FactsAPI] Using local false fact');
+      }
+      return this.getFalseGameFact();
     }
   }
 
