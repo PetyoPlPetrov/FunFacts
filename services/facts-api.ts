@@ -1,3 +1,6 @@
+import { falseFactsApi } from './false-facts-api';
+import { triviaApi } from './trivia-api';
+
 export interface ApiFact {
   id: string;
   text: string;
@@ -26,16 +29,13 @@ export interface GameFact {
   wasGuessCorrect?: boolean; // Track if the user's guess was correct
 }
 
-import { triviaApi, TriviaQuestion } from './trivia-api';
-import { falseFactsApi } from './false-facts-api';
-
 class FactsApiService {
   private baseUrl = 'https://uselessfacts.jsph.pl/api/v2';
 
   async getRandomFact(): Promise<ApiFact> {
     try {
       const response = await fetch(`${this.baseUrl}/facts/random`);
-      if (!response.ok) {
+      if (!response.ok ) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();

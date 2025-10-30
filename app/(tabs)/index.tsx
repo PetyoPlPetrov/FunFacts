@@ -1,18 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import {StyleSheet, Pressable, ActivityIndicator, Text, Platform, ScrollView, Alert, Modal} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { GameFactCard } from '@/components/game-fact-card';
-import { FactDetailModal } from '@/components/fact-detail-modal';
 import { BannerAd } from '@/components/ads/banner-ad';
 import { InterstitialAd } from '@/components/ads/interstitial-ad';
-import { factsApi, EnhancedFact, GameFact } from '@/services/facts-api';
-import { scoreManager } from '@/services/score-manager';
+import { FactDetailModal } from '@/components/fact-detail-modal';
+import { GameFactCard } from '@/components/game-fact-card';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
 import { useGameContext } from '@/contexts/game-context';
+import { EnhancedFact, factsApi, GameFact } from '@/services/facts-api';
+import { scoreManager } from '@/services/score-manager';
+import mobileAds from 'react-native-google-mobile-ads';
+
+mobileAds()
+  .initialize()
+  .then(adapterStatuses => {
+    // Initialization complete!
+  });
 
 export default function HomeScreen() {
   const { setCurrentScore, hasShownHighScoreNotification, setHasShownHighScoreNotification } = useGameContext();
@@ -38,6 +45,9 @@ export default function HomeScreen() {
   const hasNextGameFact = currentGameFactIndex < gameFactsHistory.length - 1 && !currentUnansweredFact;
   const hasPreviousGameFact = currentGameFactIndex > 0 && !currentUnansweredFact;
   const isViewingGameHistory = (currentGameFactIndex < gameFactsHistory.length - 1) && !currentUnansweredFact;
+
+  const scrollRef = useRef<ScrollView>(null);
+  const [hasAutoScrolled, setHasAutoScrolled] = useState(false);
 
   // Load initial fact and current score on mount
   useEffect(() => {
@@ -75,11 +85,11 @@ export default function HomeScreen() {
         setCurrentGameFactIndex(gameFactsHistory.length - 1);
       }
 
-      // Show interstitial ad every 5 facts
+      // Show interstitial ad every 4 facts
       setFactGenerationCount(prev => {
         const newCount = prev + 1;
-        if (newCount % 5 === 0) {
-          setTimeout(() => setInterstitialVisible(true), 500);
+        if (newCount % 12 === 0) {
+          setTimeout(() => setInterstitialVisible(true), 300);
         }
         return newCount;
       });
@@ -99,8 +109,8 @@ export default function HomeScreen() {
 
       setFactGenerationCount(prev => {
         const newCount = prev + 1;
-        if (newCount % 5 === 0) {
-          setTimeout(() => setInterstitialVisible(true), 500);
+        if (newCount % 4 === 0) {
+          setTimeout(() => setInterstitialVisible(true), 300);
         }
         return newCount;
       });
@@ -320,8 +330,25 @@ export default function HomeScreen() {
     setHasAnswered(true);
   };
 
+  // Auto-scroll when the New Challenge button becomes visible
+  useEffect(() => {
+    if (hasAnswered) {
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+    }
+  }, [hasAnswered]);
+
   return (
-    <ScrollView>
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={{ paddingBottom: 110 }}
+        onContentSizeChange={() => {
+          if (!hasAutoScrolled) {
+            scrollRef.current?.scrollToEnd({ animated: true });
+            setHasAutoScrolled(true);
+          }
+        }}
+      >
       <LinearGradient
         colors={['#FFFFFF', '#FFFFFF', '#FFFFFF']}
         style={styles.header}
@@ -457,12 +484,12 @@ export default function HomeScreen() {
         </ThemedView>
       )}
 
-      {/* Generate New Fact Button */}
-      <ThemedView style={styles.buttonContainer}>
+      {/* Generate New Fact Button (above ad) */}
+      <ThemedView style={styles.buttonContainer}> 
           {/* New Challenge Button - Only show after answering */}
           {hasAnswered && (
             <LinearGradient
-              colors={['#9CA3AF', '#EF4444']} // Grey to red gradient
+              colors={['#9CA3AF', '#EF4444']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={[
@@ -503,7 +530,7 @@ export default function HomeScreen() {
                 {
                   backgroundColor: '#FFFFFF',
                   borderWidth: 1,
-                  borderColor: '#DDDDDD', // Airbnb light gray border
+                  borderColor: '#DDDDDD',
                   shadowColor: '#000000',
                   shadowOffset: { width: 0, height: 1 },
                   shadowOpacity: 0.08,
@@ -523,8 +550,7 @@ export default function HomeScreen() {
           )}
       </ThemedView>
 
-      {/* Banner Ad */}
-      <BannerAd size="medium" />
+      </ScrollView>
 
       <FactDetailModal
         visible={modalVisible}
@@ -538,7 +564,6 @@ export default function HomeScreen() {
         onClose={() => setInterstitialVisible(false)}
         onAdClick={() => {
           // Optional: handle ad click events
-          console.log('Interstitial ad clicked');
         }}
       />
 
@@ -592,20 +617,24 @@ export default function HomeScreen() {
           </ThemedView>
         </ThemedView>
       </Modal>
-    </ScrollView>
+      {/* Anchored banner footer */}
+      <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>
+        <BannerAd size="medium" />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   header: {
-    marginTop: 100,
+    marginTop: 50,
     //paddingTop: 40,
     paddingBottom: 30,
     paddingHorizontal: 20,
   },
   headerContent: {
     backgroundColor: 'transparent',
-    marginTop: 20,
+    marginTop: 0,
     position: 'relative',
   },
   title: {
@@ -615,7 +644,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
     color: '#000000', // Pure black like Airbnb
-    marginTop: 10,
+    marginTop: 0,
     letterSpacing: -0.5,
   },
   subtitle: {

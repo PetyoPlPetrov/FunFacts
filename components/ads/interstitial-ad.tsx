@@ -1,8 +1,9 @@
-import React from 'react';
-import { StyleSheet, View, Text, Pressable, Modal, Dimensions, Platform } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { adFeatures, showInterstitial } from '@/services/ads';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef } from 'react';
+import { Dimensions, Modal, Platform, Pressable, Platform as RNPlatform, StyleSheet, Text, View } from 'react-native';
 
 interface InterstitialAdProps {
   visible: boolean;
@@ -47,6 +48,8 @@ const mockInterstitialAds = [
 ] as const;
 
 export function InterstitialAd({ visible, onClose, onAdClick }: InterstitialAdProps) {
+  // If interstitials are disabled, render nothing
+  if (!adFeatures.interstitial) return null;
   const [showCloseButton, setShowCloseButton] = React.useState(false);
   const [timeLeft, setTimeLeft] = React.useState(5);
 
@@ -88,7 +91,21 @@ export function InterstitialAd({ visible, onClose, onAdClick }: InterstitialAdPr
     onClose();
   };
 
-  if (!visible) return null;
+  // Native platforms: show real interstitial and return nothing
+  // Guard against duplicate shows (e.g., StrictMode double effect in dev)
+  const requestedRef = useRef(false);
+  useEffect(() => {
+    if (visible && RNPlatform.OS !== 'web' && !requestedRef.current) {
+      requestedRef.current = true;
+      if (__DEV__) console.log('[Ads] Interstitial visible=true → showInterstitial()');
+      showInterstitial(() => {
+        requestedRef.current = false;
+        onClose();
+      });
+    }
+  }, [visible, onClose]);
+
+  if (!visible || RNPlatform.OS !== 'web') return null;
 
   return (
     <Modal

@@ -1,7 +1,8 @@
-import React from 'react';
-import { StyleSheet, View, Text, Pressable, Platform } from 'react-native';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { adFeatures } from '@/services/ads';
 import * as Haptics from 'expo-haptics';
+import React from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface NativeAdProps {
   style?: any;
@@ -57,6 +58,7 @@ const mockNativeAds = [
 ] as const;
 
 export function NativeAd({ style, compact = false }: NativeAdProps) {
+  // If native ads are disabled, render nothing
   // Randomly select an ad
   const ad = React.useMemo(() =>
     mockNativeAds[Math.floor(Math.random() * mockNativeAds.length)],
@@ -68,6 +70,8 @@ export function NativeAd({ style, compact = false }: NativeAdProps) {
     console.log(`Mock native ad clicked: ${ad.headline}`);
     // In real implementation, this would track ad clicks and open ad destination
   };
+  
+  if (!adFeatures.native) return null;
 
   return (
     <View style={[styles.container, { backgroundColor: ad.bgColor }, style]}>
