@@ -137,7 +137,12 @@ export default function HomeScreen() {
       setGameFactsHistory(prev =>
         prev.map((fact, index) =>
           index === currentGameFactIndex
-            ? { ...fact, isAnswered: true }
+            ? {
+                ...fact,
+                isAnswered: true,
+                userGuess: userGuess,
+                wasGuessCorrect: isCorrect
+              }
             : fact
         )
       );

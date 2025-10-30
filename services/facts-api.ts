@@ -22,6 +22,8 @@ export interface GameFact {
   category?: string;
   dateDiscovered?: string;
   isAnswered?: boolean; // Track if this fact has been answered
+  userGuess?: boolean; // Track the user's guess (true/false)
+  wasGuessCorrect?: boolean; // Track if the user's guess was correct
 }
 
 import { triviaApi, TriviaQuestion } from './trivia-api';

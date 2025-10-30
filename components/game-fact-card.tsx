@@ -199,23 +199,54 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
           <ThemedView style={styles.explanationContainer}>
             <ThemedView style={styles.answerReveal}>
               <IconSymbol
-                name={wasGuessCorrect !== null
-                  ? (wasGuessCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                  : (gameFact.isTrue ? "checkmark.circle.fill" : "xmark.circle.fill")
+                name={
+                  // Prioritize stored guess result, then current session result, then fact truthfulness
+                  gameFact.wasGuessCorrect !== undefined
+                    ? (gameFact.wasGuessCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    : wasGuessCorrect !== null
+                    ? (wasGuessCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    : (gameFact.isTrue ? "checkmark.circle.fill" : "xmark.circle.fill")
                 }
                 size={32}
-                color={wasGuessCorrect !== null
-                  ? (wasGuessCorrect ? "#10B981" : "#EF4444")
-                  : (gameFact.isTrue ? "#10B981" : "#EF4444")
+                color={
+                  // Prioritize stored guess result, then current session result, then fact truthfulness
+                  gameFact.wasGuessCorrect !== undefined
+                    ? (gameFact.wasGuessCorrect ? "#10B981" : "#EF4444")
+                    : wasGuessCorrect !== null
+                    ? (wasGuessCorrect ? "#10B981" : "#EF4444")
+                    : (gameFact.isTrue ? "#10B981" : "#EF4444")
                 }
               />
               <ThemedText style={styles.answerText}>
-                The fact is <Text style={{
-                  fontWeight: 'bold',
-                  color: gameFact.isTrue ? '#10B981' : '#EF4444'
-                }}>
-                  {gameFact.isTrue ? 'TRUE' : 'FALSE'}
-                </Text>
+                {
+                  // Show appropriate message based on available data
+                  gameFact.wasGuessCorrect !== undefined || wasGuessCorrect !== null
+                    ? (
+                        <>
+                          Your guess is <Text style={{
+                            fontWeight: 'bold',
+                            color: gameFact.wasGuessCorrect !== undefined
+                              ? (gameFact.wasGuessCorrect ? '#10B981' : '#EF4444')
+                              : (wasGuessCorrect ? '#10B981' : '#EF4444')
+                          }}>
+                            {gameFact.wasGuessCorrect !== undefined
+                              ? (gameFact.wasGuessCorrect ? 'CORRECT' : 'INCORRECT')
+                              : (wasGuessCorrect ? 'CORRECT' : 'INCORRECT')
+                            }
+                          </Text>
+                        </>
+                      )
+                    : (
+                        <>
+                          The fact is <Text style={{
+                            fontWeight: 'bold',
+                            color: gameFact.isTrue ? '#10B981' : '#EF4444'
+                          }}>
+                            {gameFact.isTrue ? 'TRUE' : 'FALSE'}
+                          </Text>
+                        </>
+                      )
+                }
               </ThemedText>
             </ThemedView>
 
