@@ -41,7 +41,9 @@ class FactsApiService {
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error('Error fetching random fact:', error);
+      if (__DEV__) {
+        console.error('Error fetching random fact:', error);
+      }
       throw error;
     }
   }
@@ -55,7 +57,9 @@ class FactsApiService {
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error('Error fetching fact by ID:', error);
+      if (__DEV__) {
+        console.error('Error fetching fact by ID:', error);
+      }
       throw error;
     }
   }
@@ -77,7 +81,9 @@ class FactsApiService {
 
       return unique;
     } catch (error) {
-      console.error('Error fetching multiple facts:', error);
+      if (__DEV__) {
+        console.error('Error fetching multiple facts:', error);
+      }
       throw error;
     }
   }
@@ -109,7 +115,9 @@ class FactsApiService {
         dateDiscovered: new Date().toISOString()
       };
     } catch (error) {
-      console.error('Trivia API failed, falling back to useless facts:', error);
+      if (__DEV__) {
+        console.error('Trivia API failed, falling back to useless facts:', error);
+      }
 
       // Fallback to useless facts API (always true)
       try {

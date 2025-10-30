@@ -23,15 +23,16 @@ export default function HomeScreen() {
   // Unified guessing game states
   const [gameFactsHistory, setGameFactsHistory] = useState<GameFact[]>([]);
   const [currentGameFactIndex, setCurrentGameFactIndex] = useState(-1);
+  const [currentUnansweredFact, setCurrentUnansweredFact] = useState<GameFact | null>(null);
   const [totalScore, setTotalScore] = useState({ correct: 0, total: 0 });
   const [hasAnswered, setHasAnswered] = useState(false);
 
   // Computed values
-  const currentGameFact = currentGameFactIndex >= 0 ? gameFactsHistory[currentGameFactIndex] : null;
+  const currentGameFact = currentUnansweredFact || (currentGameFactIndex >= 0 ? gameFactsHistory[currentGameFactIndex] : null);
   const totalGameFacts = gameFactsHistory.length;
-  const hasNextGameFact = currentGameFactIndex < gameFactsHistory.length - 1;
-  const hasPreviousGameFact = currentGameFactIndex > 0;
-  const isViewingGameHistory = currentGameFactIndex < gameFactsHistory.length - 1;
+  const hasNextGameFact = currentGameFactIndex < gameFactsHistory.length - 1 && !currentUnansweredFact;
+  const hasPreviousGameFact = currentGameFactIndex > 0 && !currentUnansweredFact;
+  const isViewingGameHistory = (currentGameFactIndex < gameFactsHistory.length - 1) && !currentUnansweredFact;
 
   // Load initial fact on mount
   useEffect(() => {
@@ -46,9 +47,12 @@ export default function HomeScreen() {
     try {
       const gameFact = await factsApi.getRandomGameFact();
 
-      // Add to game facts history and set as current
-      setGameFactsHistory(prev => [...prev, gameFact]);
-      setCurrentGameFactIndex(prev => prev + 1);
+      // Set as current unanswered fact (don't add to history until answered)
+      setCurrentUnansweredFact(gameFact);
+      // Only set index if there are facts in history, otherwise keep at -1
+      if (gameFactsHistory.length > 0) {
+        setCurrentGameFactIndex(gameFactsHistory.length - 1);
+      }
 
       // Show interstitial ad every 5 facts
       setFactGenerationCount(prev => {
@@ -59,13 +63,18 @@ export default function HomeScreen() {
         return newCount;
       });
     } catch (err) {
-      console.error('Error loading game fact:', err);
+      if (__DEV__) {
+        console.error('Error loading game fact:', err);
+      }
       setError('Failed to load fact. Please try again.');
 
       // Fallback to false fact
       const falseFact = factsApi.getFalseGameFact();
-      setGameFactsHistory(prev => [...prev, falseFact]);
-      setCurrentGameFactIndex(prev => prev + 1);
+      setCurrentUnansweredFact(falseFact);
+      // Only set index if there are facts in history, otherwise keep at -1
+      if (gameFactsHistory.length > 0) {
+        setCurrentGameFactIndex(gameFactsHistory.length - 1);
+      }
 
       setFactGenerationCount(prev => {
         const newCount = prev + 1;
@@ -87,30 +96,29 @@ export default function HomeScreen() {
   const goToPreviousGameFact = () => {
     if (hasPreviousGameFact) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setCurrentGameFactIndex(prev => {
-        const newIndex = prev - 1;
-        const targetFact = gameFactsHistory[newIndex];
-        setHasAnswered(targetFact?.isAnswered || false);
-        return newIndex;
-      });
+      setCurrentUnansweredFact(null); // Clear any unanswered fact
+      const newIndex = currentGameFactIndex - 1;
+      setCurrentGameFactIndex(newIndex);
+      const targetFact = gameFactsHistory[newIndex];
+      setHasAnswered(targetFact?.isAnswered || false);
     }
   };
 
   const goToNextGameFact = () => {
     if (hasNextGameFact) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setCurrentGameFactIndex(prev => {
-        const newIndex = prev + 1;
-        const targetFact = gameFactsHistory[newIndex];
-        setHasAnswered(targetFact?.isAnswered || false);
-        return newIndex;
-      });
+      setCurrentUnansweredFact(null); // Clear any unanswered fact
+      const newIndex = currentGameFactIndex + 1;
+      setCurrentGameFactIndex(newIndex);
+      const targetFact = gameFactsHistory[newIndex];
+      setHasAnswered(targetFact?.isAnswered || false);
     }
   };
 
   const goToLatestGameFact = () => {
     if (gameFactsHistory.length > 0) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setCurrentUnansweredFact(null); // Clear any unanswered fact
       const latestIndex = gameFactsHistory.length - 1;
       setCurrentGameFactIndex(latestIndex);
       const latestFact = gameFactsHistory[latestIndex];
@@ -132,23 +140,21 @@ export default function HomeScreen() {
       total: prev.total + 1
     }));
 
-    // Mark current fact as answered in the game facts history
-    if (currentGameFact) {
-      setGameFactsHistory(prev =>
-        prev.map((fact, index) =>
-          index === currentGameFactIndex
-            ? {
-                ...fact,
-                isAnswered: true,
-                userGuess: userGuess,
-                wasGuessCorrect: isCorrect
-              }
-            : fact
-        )
-      );
+    // Add the current unanswered fact to history with answer data
+    if (currentUnansweredFact) {
+      const answeredFact = {
+        ...currentUnansweredFact,
+        isAnswered: true,
+        userGuess: userGuess,
+        wasGuessCorrect: isCorrect
+      };
+
+      setGameFactsHistory(prev => [...prev, answeredFact]);
+      setCurrentGameFactIndex(prev => prev + 1);
+      setCurrentUnansweredFact(null); // Clear the unanswered fact
 
       // Add to regular facts history for browsing
-      const enhancedFact = factsApi.gameFactToEnhanced(currentGameFact);
+      const enhancedFact = factsApi.gameFactToEnhanced(answeredFact);
       setFactsHistory(prev => [...prev, enhancedFact]);
     }
 
@@ -238,7 +244,7 @@ export default function HomeScreen() {
       </ThemedView>
 
       {/* History Navigation */}
-      {totalGameFacts > 1 && (
+      {totalGameFacts > 0 && (
         <ThemedView style={styles.historyNavigation}>
           <Pressable
             style={[
@@ -253,7 +259,12 @@ export default function HomeScreen() {
 
           <ThemedView style={styles.historyIndicator}>
             <ThemedText style={styles.historyText}>
-              {currentGameFactIndex + 1} / {totalGameFacts}
+              {currentUnansweredFact
+                ? 'Current Challenge'
+                : totalGameFacts > 0 && currentGameFactIndex >= 0
+                  ? `${currentGameFactIndex + 1} / ${totalGameFacts}`
+                  : '1 / 1'
+              }
             </ThemedText>
           </ThemedView>
 
@@ -280,7 +291,7 @@ export default function HomeScreen() {
               styles.generateButton,
               {
                 borderWidth: 0,
-                opacity: isLoading ? 0.6 : 1,
+                opacity: isLoading ? 0.5 : 1,
                 shadowColor: '#EF4444',
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.15,

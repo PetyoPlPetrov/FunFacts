@@ -45,7 +45,9 @@ class TriviaAPIService {
 
       return data.results;
     } catch (error) {
-      console.error('Error fetching trivia questions:', error);
+      if (__DEV__) {
+        console.error('Error fetching trivia questions:', error);
+      }
       throw error;
     }
   }

@@ -40,7 +40,9 @@ export function FactDetailModal({ visible, fact, onClose }: FactDetailModalProps
         title: 'Amazing Fun Fact!'
       });
     } catch (error) {
-      console.error('Error sharing:', error);
+      if (__DEV__) {
+        console.error('Error sharing:', error);
+      }
     }
   };
 
