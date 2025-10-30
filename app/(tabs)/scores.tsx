@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, Pressable, Platform, Text, Alert } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as Haptics from 'expo-haptics';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useFocusEffect } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useState } from 'react';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
+import { BannerAd } from '@/components/ads/banner-ad';
+import { NativeScoreRow } from '@/components/ads/native-score-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { scoreManager, ScoreStats, GameScore } from '@/services/score-manager';
-import { BannerAd } from '@/components/ads/banner-ad';
 import { useGameContext } from '@/contexts/game-context';
+import { GameScore, scoreManager, ScoreStats } from '@/services/score-manager';
 
 export default function ScoresScreen() {
   const { currentScore } = useGameContext();
@@ -173,7 +174,16 @@ export default function ScoresScreen() {
 
           {scoreStats.allScores.length > 0 ? (
             <ThemedView style={styles.historyList}>
-              {scoreStats.allScores.map((score, index) => renderScoreHistoryItem(score, index))}
+              {(() => {
+                const len = scoreStats.allScores.length;
+                const midIndex = Math.floor((len - 1) / 2); // place roughly in the middle
+                return scoreStats.allScores.map((score, index) => (
+                  <React.Fragment key={score.id}>
+                    {renderScoreHistoryItem(score, index)}
+                    {index === midIndex && <NativeScoreRow />}
+                  </React.Fragment>
+                ));
+              })()}
             </ThemedView>
           ) : (
             <ThemedView style={styles.emptyHistory}>

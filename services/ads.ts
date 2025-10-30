@@ -12,10 +12,12 @@ export const adUnitIds = {
   ios: {
     banner: TestIds.ADAPTIVE_BANNER,
     interstitial: null, // iOS not configured
+    native: TestIds.NATIVE, // show test native on iOS in dev
   },
   android: {
     banner: __DEV__ ? TestIds.ADAPTIVE_BANNER : 'ca-app-pub-7258081299134493/3365228658',
     interstitial: __DEV__ ? TestIds.INTERSTITIAL : 'ca-app-pub-7258081299134493/6671184316',
+    native: __DEV__ ? TestIds.NATIVE : 'ca-app-pub-7258081299134493/7980396551',
   }
 } as const;
 
@@ -23,7 +25,7 @@ export const adUnitIds = {
 export const adFeatures = {
   banner: true,
   interstitial: true,
-  native: false,
+  native: true,
 } as const;
 
 export const getBannerSize = (size?: 'small' | 'medium' | 'large') => {
