@@ -272,31 +272,37 @@ export default function HomeScreen() {
 
       {/* Generate New Fact Button */}
       <ThemedView style={styles.buttonContainer}>
-          <Pressable
+          <LinearGradient
+            colors={['#9CA3AF', '#EF4444']} // Grey to red gradient
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
             style={[
               styles.generateButton,
               {
-                backgroundColor: '#FF385C', // Authentic Airbnb coral
                 borderWidth: 0,
                 opacity: isLoading ? 0.6 : 1,
-                shadowColor: '#FF385C',
+                shadowColor: '#EF4444',
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.15,
                 shadowRadius: 8,
               }
             ]}
-            onPress={generateNewFact}
-            disabled={isLoading}
           >
-            {isLoading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <IconSymbol name="arrow.clockwise" size={24} color="#FFFFFF" />
-            )}
-            <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>
-              {isLoading ? 'Loading...' : 'New Challenge'}
-            </Text>
-          </Pressable>
+            <Pressable
+              style={styles.gradientButtonInner}
+              onPress={generateNewFact}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <IconSymbol name="arrow.clockwise" size={24} color="#FFFFFF" />
+              )}
+              <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>
+                {isLoading ? 'Loading...' : 'New Challenge'}
+              </Text>
+            </Pressable>
+          </LinearGradient>
 
           {/* Back to Latest Button */}
           {isViewingGameHistory && (
@@ -438,6 +444,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  gradientButtonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    gap: 12,
   },
   buttonText: {
     fontSize: 18,
