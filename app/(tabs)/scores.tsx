@@ -66,7 +66,7 @@ export default function ScoresScreen() {
         <ThemedView style={styles.cardHeader}>
           <ThemedText style={styles.cardTitle}>{title}</ThemedText>
           {isHighest && (
-            <IconSymbol name="crown.fill" size={20} color="#FFD700" />
+            <IconSymbol name="star.fill" size={20} color="#F54768" />
           )}
         </ThemedView>
 
@@ -135,7 +135,7 @@ export default function ScoresScreen() {
             style={styles.deleteButton}
             onPress={() => handleDeleteScore(score.id)}
           >
-            <IconSymbol name="trash" size={16} color="#EF4444" />
+            <IconSymbol name="trash" size={16} color="#DC3545" />
           </Pressable>
         </ThemedView>
       </ThemedView>
@@ -146,7 +146,7 @@ export default function ScoresScreen() {
     <View style={styles.container}>
       <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
         <LinearGradient
-          colors={['#FFFFFF', '#FFFFFF', '#FFFFFF']}
+          colors={['#FFFFFF', '#F7F7F7']}
           style={styles.header}
         >
           <ThemedView style={styles.headerContent}>
@@ -227,6 +227,8 @@ const styles = StyleSheet.create({
     marginTop: 100,
     paddingBottom: 30,
     paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   headerContent: {
     backgroundColor: 'transparent',
@@ -263,7 +265,7 @@ const styles = StyleSheet.create({
   scoreCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 20,
     borderWidth: 1,
     borderColor: '#EBEBEB',
@@ -271,14 +273,16 @@ const styles = StyleSheet.create({
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
     shadowColor: '#000000',
   },
   highestScoreCard: {
-    borderColor: '#FFD700',
+    borderColor: '#F54768',
     borderWidth: 2,
+    shadowColor: '#F54768',
+    shadowOpacity: 0.15,
   },
   emptyScoreCard: {
     alignItems: 'center',
@@ -305,11 +309,11 @@ const styles = StyleSheet.create({
   percentageText: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#10B981',
+    color: '#00A86B',
     marginBottom: 4,
   },
   highestPercentageText: {
-    color: '#FFD700',
+    color: '#F54768',
   },
   scoreBreakdown: {
     fontSize: 14,

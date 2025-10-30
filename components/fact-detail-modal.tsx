@@ -93,7 +93,7 @@ export function FactDetailModal({ visible, fact, onClose }: FactDetailModalProps
     >
       <ThemedView style={styles.container}>
         <LinearGradient
-          colors={['#FFFFFF', '#FFFFFF', '#FFFFFF']}
+          colors={['#FFFFFF', '#F7F7F7']}
           style={styles.header}
         >
           <ThemedView style={styles.headerContent}>
@@ -159,12 +159,12 @@ export function FactDetailModal({ visible, fact, onClose }: FactDetailModalProps
               style={[
                 styles.actionButton,
                 {
-                  backgroundColor: '#FF385C', // Authentic Airbnb coral
+                  backgroundColor: '#F54768',
                   borderWidth: 0,
-                  shadowColor: '#FF385C',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.15,
-                  shadowRadius: 8,
+                  shadowColor: '#F54768',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 12,
                 }
               ]}
               onPress={handleShare}
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 16,
     paddingHorizontal: 24,
-    borderRadius: 25,
+    borderRadius: 12,
     gap: 12,
     shadowOffset: {
       width: 0,

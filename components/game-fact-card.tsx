@@ -117,11 +117,11 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
   const getCardBackgroundColor = () => {
     switch (answerState) {
       case 'correct':
-        return '#D1FAE5'; // Light green
+        return '#E8F5E9'; // Light green (Airbnb style)
       case 'incorrect':
-        return '#FEE2E2'; // Light red
+        return '#FFEBEE'; // Light red (Airbnb style)
       case 'revealed':
-        return '#F3F4F6'; // Light gray
+        return '#F7F7F7'; // Light gray
       default:
         return '#FFFFFF'; // White
     }
@@ -130,11 +130,11 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
   const getCardBorderColor = () => {
     switch (answerState) {
       case 'correct':
-        return '#10B981'; // Green
+        return '#00A86B'; // Jade green
       case 'incorrect':
-        return '#EF4444'; // Red
+        return '#DC3545'; // Crimson red
       case 'revealed':
-        return '#9CA3AF'; // Gray
+        return '#DDDDDD'; // Gray
       default:
         return '#DDDDDD'; // Light gray
     }
@@ -170,7 +170,7 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
                 onPress={() => handleAnswer(true)}
                 disabled={disabled}
               >
-                <IconSymbol name="checkmark.circle.fill" size={24} color="#FFFFFF" />
+                <IconSymbol name="checkmark.circle.fill" size={20} color="#FFFFFF" />
                 <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>
                   True
                 </Text>
@@ -181,7 +181,7 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
                 onPress={() => handleAnswer(false)}
                 disabled={disabled}
               >
-                <IconSymbol name="xmark.circle.fill" size={24} color="#FFFFFF" />
+                <IconSymbol name="xmark.circle.fill" size={20} color="#FFFFFF" />
                 <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>
                   False
                 </Text>
@@ -200,11 +200,11 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
                     ? (gameFact.wasGuessCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
                     : (gameFact.isTrue ? "checkmark.circle.fill" : "xmark.circle.fill")
                 }
-                size={32}
+                size={28}
                 color={
                   gameFact.wasGuessCorrect !== undefined
-                    ? (gameFact.wasGuessCorrect ? "#10B981" : "#EF4444")
-                    : (gameFact.isTrue ? "#10B981" : "#EF4444")
+                    ? (gameFact.wasGuessCorrect ? "#00A86B" : "#DC3545")
+                    : (gameFact.isTrue ? "#00A86B" : "#DC3545")
                 }
               />
               <ThemedText style={styles.answerText}>
@@ -212,7 +212,7 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
                   <>
                     Your guess is <Text style={{
                       fontWeight: 'bold',
-                      color: gameFact.wasGuessCorrect ? '#10B981' : '#EF4444'
+                      color: gameFact.wasGuessCorrect ? '#00A86B' : '#DC3545'
                     }}>
                       {gameFact.wasGuessCorrect ? 'CORRECT' : 'INCORRECT'}
                     </Text>
@@ -221,7 +221,7 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
                   <>
                     The fact is <Text style={{
                       fontWeight: 'bold',
-                      color: gameFact.isTrue ? '#10B981' : '#EF4444'
+                      color: gameFact.isTrue ? '#00A86B' : '#DC3545'
                     }}>
                       {gameFact.isTrue ? 'TRUE' : 'FALSE'}
                     </Text>
@@ -259,21 +259,21 @@ const styles = StyleSheet.create({
     marginVertical: 16,
   },
   card: {
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 24,
-    borderWidth: 2,
+    borderWidth: 1.5,
     ...Platform.select({
       ios: {
         shadowColor: '#000000',
         shadowOffset: {
           width: 0,
-          height: 4,
+          height: 2,
         },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 8,
+        elevation: 4,
       },
     }),
   },
@@ -311,9 +311,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: 25,
+    borderRadius: 8,
     gap: 8,
     ...Platform.select({
       ios: {
@@ -322,19 +322,19 @@ const styles = StyleSheet.create({
           width: 0,
           height: 2,
         },
-        shadowOpacity: 0.15,
+        shadowOpacity: 0.12,
         shadowRadius: 4,
       },
       android: {
-        elevation: 4,
+        elevation: 3,
       },
     }),
   },
   trueButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#00A86B',
   },
   falseButton: {
-    backgroundColor: '#EF4444',
+    backgroundColor: '#DC3545',
   },
   buttonText: {
     fontSize: 16,

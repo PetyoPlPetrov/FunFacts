@@ -351,7 +351,7 @@ export default function HomeScreen() {
         }}
       >
       <LinearGradient
-        colors={['#FFFFFF', '#FFFFFF', '#FFFFFF']}
+        colors={['#FFFFFF', '#F7F7F7']}
         style={styles.header}
       >
         <ThemedView style={styles.headerContent}>
@@ -376,10 +376,10 @@ export default function HomeScreen() {
                 colors={
                   totalScore.total > 0
                     ? [
-                        '#10B981', // Green
-                        '#10B981', // Green
-                        '#EF4444', // Red
-                        '#EF4444'  // Red
+                        '#00A86B', // Jade green
+                        '#00A86B',
+                        '#DC3545', // Crimson red
+                        '#DC3545'
                       ]
                     : ['#EBEBEB', '#EBEBEB'] // Default gray when no answers
                 }
@@ -424,7 +424,7 @@ export default function HomeScreen() {
       <ThemedView style={styles.cardContainer}>
         {isLoading ? (
           <ThemedView style={styles.loadingCard}>
-            <ActivityIndicator size="large" color="#FF385C" />
+            <ActivityIndicator size="large" color="#F54768" />
             <ThemedText style={styles.loadingText}>
               {currentGameFact ? 'Loading next challenge...' : 'Loading your first challenge...'}
             </ThemedText>
@@ -441,7 +441,7 @@ export default function HomeScreen() {
           />
         ) : (
           <ThemedView style={styles.loadingCard}>
-            <ActivityIndicator size="large" color="#FF385C" />
+            <ActivityIndicator size="large" color="#F54768" />
             <ThemedText style={styles.loadingText}>Loading your first challenge...</ThemedText>
           </ThemedView>
         )}
@@ -490,7 +490,7 @@ export default function HomeScreen() {
           {/* New Challenge Button - Only show after answering */}
           {hasAnswered && (
             <LinearGradient
-              colors={['#9CA3AF', '#EF4444']}
+              colors={['#F54768', '#D91E4F']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={[
@@ -498,10 +498,10 @@ export default function HomeScreen() {
                 {
                   borderWidth: 0,
                   opacity: isLoading ? 0.5 : 1,
-                  shadowColor: '#EF4444',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.15,
-                  shadowRadius: 8,
+                  shadowColor: '#F54768',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 12,
                 }
               ]}
             >
@@ -577,7 +577,7 @@ export default function HomeScreen() {
       >
         <ThemedView style={styles.settingsModal}>
           <LinearGradient
-            colors={['#FFFFFF', '#FFFFFF', '#FFFFFF']}
+            colors={['#FFFFFF', '#F7F7F7']}
             style={styles.settingsHeader}
           >
             <ThemedView style={styles.settingsHeaderContent}>
@@ -602,7 +602,7 @@ export default function HomeScreen() {
                 style={styles.settingsActionButton}
                 onPress={handleRestartGame}
               >
-                <IconSymbol name="arrow.counterclockwise" size={24} color="#EF4444" />
+                <IconSymbol name="arrow.counterclockwise" size={24} color="#F54768" />
                 <ThemedView style={styles.settingsButtonContent}>
                   <ThemedText style={styles.settingsButtonTitle}>Restart Game</ThemedText>
                   <ThemedText style={styles.settingsButtonSubtitle}>
@@ -629,9 +629,10 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   header: {
     marginTop: 50,
-    //paddingTop: 40,
     paddingBottom: 30,
     paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   headerContent: {
     backgroundColor: 'transparent',
@@ -707,7 +708,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 16,
     paddingHorizontal: 24,
-    borderRadius: 25,
+    borderRadius: 12,
     gap: 12,
     shadowOffset: {
       width: 0,
