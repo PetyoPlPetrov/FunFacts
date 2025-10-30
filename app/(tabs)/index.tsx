@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {StyleSheet, Pressable, ActivityIndicator, Text, Platform, ScrollView} from 'react-native';
+import {StyleSheet, Pressable, ActivityIndicator, Text, Platform, ScrollView, Alert, Modal} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -11,14 +11,19 @@ import { FactDetailModal } from '@/components/fact-detail-modal';
 import { BannerAd } from '@/components/ads/banner-ad';
 import { InterstitialAd } from '@/components/ads/interstitial-ad';
 import { factsApi, EnhancedFact, GameFact } from '@/services/facts-api';
+import { scoreManager } from '@/services/score-manager';
+import { useGameContext } from '@/contexts/game-context';
 
 export default function HomeScreen() {
+  const { setCurrentScore, hasShownHighScoreNotification, setHasShownHighScoreNotification } = useGameContext();
+
   const [, setFactsHistory] = useState<EnhancedFact[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [interstitialVisible, setInterstitialVisible] = useState(false);
   const [, setFactGenerationCount] = useState(0);
+  const [settingsModalVisible, setSettingsModalVisible] = useState(false);
 
   // Unified guessing game states
   const [gameFactsHistory, setGameFactsHistory] = useState<GameFact[]>([]);
@@ -34,10 +39,26 @@ export default function HomeScreen() {
   const hasPreviousGameFact = currentGameFactIndex > 0 && !currentUnansweredFact;
   const isViewingGameHistory = (currentGameFactIndex < gameFactsHistory.length - 1) && !currentUnansweredFact;
 
-  // Load initial fact on mount
+  // Load initial fact and current score on mount
   useEffect(() => {
-    loadNewGameFact();
+    loadInitialGameState();
   }, []);
+
+  const loadInitialGameState = async () => {
+    // Always start fresh - clear any previously saved current score
+    try {
+      await scoreManager.resetCurrentScore();
+      // Ensure we start with 0/0 every time
+      setTotalScore({ correct: 0, total: 0 });
+    } catch (error) {
+      if (__DEV__) {
+        console.error('Error resetting current score:', error);
+      }
+    }
+
+    // Load initial fact
+    loadNewGameFact();
+  };
 
   const loadNewGameFact = async () => {
     setIsLoading(true);
@@ -88,6 +109,40 @@ export default function HomeScreen() {
     }
   };
 
+  const loadNewGameFactForRestart = async () => {
+    setIsLoading(true);
+    setError(null);
+    setHasAnswered(false);
+
+    try {
+      const gameFact = await factsApi.getRandomGameFact();
+
+      // Set as current unanswered fact (don't add to history until answered)
+      setCurrentUnansweredFact(gameFact);
+      // For restart, always set index to -1 since we cleared history
+      setCurrentGameFactIndex(-1);
+
+      // Reset fact generation count for restart
+      setFactGenerationCount(0);
+    } catch (err) {
+      if (__DEV__) {
+        console.error('Error loading game fact:', err);
+      }
+      setError('Failed to load fact. Please try again.');
+
+      // Fallback to false fact
+      const falseFact = factsApi.getFalseGameFact();
+      setCurrentUnansweredFact(falseFact);
+      // For restart, always set index to -1 since we cleared history
+      setCurrentGameFactIndex(-1);
+
+      // Reset fact generation count for restart
+      setFactGenerationCount(0);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const generateNewFact = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     loadNewGameFact();
@@ -133,12 +188,116 @@ export default function HomeScreen() {
     }
   };
 
-  const handleAnswer = (userGuess: boolean, isCorrect: boolean) => {
+  const handleRestartGame = () => {
+    const hasCorrectAnswers = totalScore.correct > 0;
+    const hasPlayedQuestions = totalScore.total > 0;
+
+    let message = 'Start a new game session?';
+    if (hasPlayedQuestions) {
+      if (hasCorrectAnswers) {
+        // Show persistence message only if there are correct answers
+        message = `Are you sure you want to restart? Your current score of ${totalScore.correct}/${totalScore.total} (${Math.round((totalScore.correct / totalScore.total) * 100)}%) will be saved to your history.`;
+      } else {
+        // Don't mention persistence for 0% scores
+        message = `Are you sure you want to restart? Your current progress will be reset.`;
+      }
+    }
+
+    Alert.alert(
+      'Restart Game',
+      message,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Restart',
+          style: 'destructive',
+          onPress: performRestart
+        }
+      ]
+    );
+  };
+
+  const performRestart = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+
+    // Finalize current score only if there are correct answers
+    if (totalScore.total > 0 && totalScore.correct > 0) {
+      try {
+        // Save current score before finalizing (only when restarting with correct answers)
+        await scoreManager.saveCurrentScore(totalScore.correct, totalScore.total);
+        const result = await scoreManager.finalizeScore();
+
+        // Show notification if new high score was achieved
+        if (result.isNewHighScore) {
+          setTimeout(() => {
+            Alert.alert(
+              '🎉 New Personal Best!',
+              `Congratulations! You achieved a new high score of ${result.finalScore.percentage}% (${result.finalScore.correct}/${result.finalScore.total})!`,
+              [{ text: 'Awesome!', style: 'default' }]
+            );
+          }, 500); // Small delay to allow UI to update
+        }
+      } catch (error) {
+        if (__DEV__) {
+          console.error('Error finalizing score:', error);
+        }
+      }
+    }
+
+    // Reset all game states
+    setGameFactsHistory([]);
+    setCurrentGameFactIndex(-1);
+    setCurrentUnansweredFact(null);
+    setTotalScore({ correct: 0, total: 0 });
+    setHasAnswered(false);
+    setFactsHistory([]);
+
+    // Reset context states
+    setCurrentScore({ correct: 0, total: 0 });
+    setHasShownHighScoreNotification(false);
+
+    // Close settings modal
+    setSettingsModalVisible(false);
+
+    // Load a new fact to start fresh
+    await loadNewGameFactForRestart();
+  };
+
+  const handleAnswer = async (userGuess: boolean, isCorrect: boolean) => {
     // Update total score
-    setTotalScore(prev => ({
-      correct: prev.correct + (isCorrect ? 1 : 0),
-      total: prev.total + 1
-    }));
+    const newScore = {
+      correct: totalScore.correct + (isCorrect ? 1 : 0),
+      total: totalScore.total + 1
+    };
+
+    setTotalScore(newScore);
+
+    // Update context with current score for scores tab
+    setCurrentScore(newScore);
+
+    // Check for new high score and show notification if needed
+    if (!hasShownHighScoreNotification && newScore.correct > 0) {
+      try {
+        const stats = await scoreManager.getScoreStats();
+        const currentGameScore = scoreManager.createScore(newScore.correct, newScore.total);
+
+        if (!stats.highestScore || currentGameScore.compositeScore > stats.highestScore.compositeScore) {
+          // This is a new high score!
+          setHasShownHighScoreNotification(true);
+          setTimeout(() => {
+            Alert.alert(
+              '🎉 New Personal Best!',
+              `Amazing! You've achieved a new high score of ${currentGameScore.percentage}% (${newScore.correct}/${newScore.total})!`,
+              [{ text: 'Keep Going!', style: 'default' }]
+            );
+          }, 500); // Small delay for better UX
+        }
+      } catch (error) {
+        if (__DEV__) {
+          console.error('Error checking high score:', error);
+        }
+      }
+    }
 
     // Add the current unanswered fact to history with answer data
     if (currentUnansweredFact) {
@@ -168,6 +327,16 @@ export default function HomeScreen() {
         style={styles.header}
       >
         <ThemedView style={styles.headerContent}>
+          <Pressable
+            style={styles.settingsButton}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setSettingsModalVisible(true);
+            }}
+          >
+            <IconSymbol name="gearshape.fill" size={20} color="#717171" />
+          </Pressable>
+
           <Text style={styles.title}>Fun Facts</Text>
           <ThemedText style={styles.subtitle}>
             Guess if facts are true or false!
@@ -225,7 +394,14 @@ export default function HomeScreen() {
       </LinearGradient>
 
       <ThemedView style={styles.cardContainer}>
-        {currentGameFact ? (
+        {isLoading ? (
+          <ThemedView style={styles.loadingCard}>
+            <ActivityIndicator size="large" color="#FF385C" />
+            <ThemedText style={styles.loadingText}>
+              {currentGameFact ? 'Loading next challenge...' : 'Loading your first challenge...'}
+            </ThemedText>
+          </ThemedView>
+        ) : currentGameFact ? (
           <GameFactCard
             gameFact={currentGameFact}
             onAnswer={handleAnswer}
@@ -283,37 +459,40 @@ export default function HomeScreen() {
 
       {/* Generate New Fact Button */}
       <ThemedView style={styles.buttonContainer}>
-          <LinearGradient
-            colors={['#9CA3AF', '#EF4444']} // Grey to red gradient
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={[
-              styles.generateButton,
-              {
-                borderWidth: 0,
-                opacity: isLoading ? 0.5 : 1,
-                shadowColor: '#EF4444',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.15,
-                shadowRadius: 8,
-              }
-            ]}
-          >
-            <Pressable
-              style={styles.gradientButtonInner}
-              onPress={generateNewFact}
-              disabled={isLoading}
+          {/* New Challenge Button - Only show after answering */}
+          {hasAnswered && (
+            <LinearGradient
+              colors={['#9CA3AF', '#EF4444']} // Grey to red gradient
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[
+                styles.generateButton,
+                {
+                  borderWidth: 0,
+                  opacity: isLoading ? 0.5 : 1,
+                  shadowColor: '#EF4444',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 8,
+                }
+              ]}
             >
-              {isLoading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <IconSymbol name="arrow.clockwise" size={24} color="#FFFFFF" />
-              )}
-              <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>
-                {isLoading ? 'Loading...' : 'New Challenge'}
-              </Text>
-            </Pressable>
-          </LinearGradient>
+              <Pressable
+                style={styles.gradientButtonInner}
+                onPress={generateNewFact}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <IconSymbol name="arrow.clockwise" size={24} color="#FFFFFF" />
+                )}
+                <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>
+                  {isLoading ? 'Loading...' : 'New Challenge'}
+                </Text>
+              </Pressable>
+            </LinearGradient>
+          )}
 
           {/* Back to Latest Button */}
           {isViewingGameHistory && (
@@ -362,6 +541,57 @@ export default function HomeScreen() {
           console.log('Interstitial ad clicked');
         }}
       />
+
+      {/* Settings Modal */}
+      <Modal
+        visible={settingsModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setSettingsModalVisible(false)}
+      >
+        <ThemedView style={styles.settingsModal}>
+          <LinearGradient
+            colors={['#FFFFFF', '#FFFFFF', '#FFFFFF']}
+            style={styles.settingsHeader}
+          >
+            <ThemedView style={styles.settingsHeaderContent}>
+              <Pressable
+                style={styles.closeSettingsButton}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setSettingsModalVisible(false);
+                }}
+              >
+                <ThemedText style={styles.closeSettingsButtonText}>✕</ThemedText>
+              </Pressable>
+              <ThemedText style={styles.settingsTitle}>Game Settings</ThemedText>
+            </ThemedView>
+          </LinearGradient>
+
+          <ThemedView style={styles.settingsContent}>
+            <ThemedView style={styles.settingsSection}>
+              <ThemedText style={styles.settingsSectionTitle}>Game Controls</ThemedText>
+
+              <Pressable
+                style={styles.settingsActionButton}
+                onPress={handleRestartGame}
+              >
+                <IconSymbol name="arrow.counterclockwise" size={24} color="#EF4444" />
+                <ThemedView style={styles.settingsButtonContent}>
+                  <ThemedText style={styles.settingsButtonTitle}>Restart Game</ThemedText>
+                  <ThemedText style={styles.settingsButtonSubtitle}>
+                    {totalScore.total > 0
+                      ? `Current score: ${totalScore.correct}/${totalScore.total} (${Math.round((totalScore.correct / totalScore.total) * 100)}%)`
+                      : 'Start a new game session'
+                    }
+                  </ThemedText>
+                </ThemedView>
+                <IconSymbol name="chevron.right" size={16} color="#9CA3AF" />
+              </Pressable>
+            </ThemedView>
+          </ThemedView>
+        </ThemedView>
+      </Modal>
     </ScrollView>
   );
 }
@@ -376,6 +606,7 @@ const styles = StyleSheet.create({
   headerContent: {
     backgroundColor: 'transparent',
     marginTop: 20,
+    position: 'relative',
   },
   title: {
     fontSize: 36,
@@ -578,5 +809,118 @@ const styles = StyleSheet.create({
   },
   secondaryGenerateButton: {
     marginTop: 12,
+  },
+  settingsButton: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+    shadowColor: '#000000',
+  },
+  settingsModal: {
+    flex: 1,
+  },
+  settingsHeader: {
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+  },
+  settingsHeaderContent: {
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+  },
+  closeSettingsButton: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  closeSettingsButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  settingsTitle: {
+    fontSize: 24,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 16,
+    letterSpacing: -0.3,
+  },
+  settingsContent: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: 'transparent',
+  },
+  settingsSection: {
+    backgroundColor: 'transparent',
+    marginBottom: 30,
+  },
+  settingsSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 16,
+  },
+  settingsActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    shadowColor: '#000000',
+    gap: 12,
+  },
+  settingsButtonContent: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  settingsButtonTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  settingsButtonSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
   },
 });
