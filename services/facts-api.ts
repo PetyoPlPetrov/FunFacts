@@ -12,6 +12,7 @@ export interface ApiFact {
 export interface EnhancedFact extends ApiFact {
   isFavorite?: boolean;
   dateDiscovered?: string;
+  explanation?: string; // For false facts, explains why it's false
 }
 
 export interface GameFact {
@@ -202,7 +203,8 @@ class FactsApiService {
       language: 'en',
       permalink: '',
       isFavorite: false,
-      dateDiscovered: gameFact.dateDiscovered
+      dateDiscovered: gameFact.dateDiscovered,
+      explanation: gameFact.explanation
     };
   }
 }

@@ -3,7 +3,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { BannerAd } from '@/components/ads/banner-ad';
 import { NativeScoreRow } from '@/components/ads/native-score-row';
@@ -143,70 +143,85 @@ export default function ScoresScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <LinearGradient
-        colors={['#FFFFFF', '#FFFFFF', '#FFFFFF']}
-        style={styles.header}
-      >
-        <ThemedView style={styles.headerContent}>
-          <Text style={styles.title}>Your Scores</Text>
-          <ThemedText style={styles.subtitle}>
-            Track your Fun Facts performance
-          </ThemedText>
-        </ThemedView>
-      </LinearGradient>
-
-      <ThemedView style={styles.content}>
-        {/* Current and Highest Score Cards */}
-        <ThemedView style={styles.topScoresSection}>
-          {renderScoreCard(scoreStats.currentScore, 'Current Game')}
-          {renderScoreCard(scoreStats.highestScore, 'Personal Best', true)}
-        </ThemedView>
-
-        {/* Score History */}
-        <ThemedView style={styles.historySection}>
-          <ThemedView style={styles.sectionHeader}>
-            <ThemedText style={styles.sectionTitle}>Score History</ThemedText>
-            <ThemedText style={styles.sectionSubtitle}>
-              {scoreStats.allScores.length} game{scoreStats.allScores.length !== 1 ? 's' : ''} played
+    <View style={styles.container}>
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
+        <LinearGradient
+          colors={['#FFFFFF', '#FFFFFF', '#FFFFFF']}
+          style={styles.header}
+        >
+          <ThemedView style={styles.headerContent}>
+            <Text style={styles.title}>Your Scores</Text>
+            <ThemedText style={styles.subtitle}>
+              Track your Fun Facts performance
             </ThemedText>
           </ThemedView>
+        </LinearGradient>
 
-          {scoreStats.allScores.length > 0 ? (
-            <ThemedView style={styles.historyList}>
-              {(() => {
-                const len = scoreStats.allScores.length;
-                const midIndex = Math.floor((len - 1) / 2); // place roughly in the middle
-                return scoreStats.allScores.map((score, index) => (
-                  <React.Fragment key={score.id}>
-                    {renderScoreHistoryItem(score, index)}
-                    {index === midIndex && <NativeScoreRow />}
-                  </React.Fragment>
-                ));
-              })()}
-            </ThemedView>
-          ) : (
-            <ThemedView style={styles.emptyHistory}>
-              <IconSymbol name="chart.bar" size={48} color="#9CA3AF" />
-              <ThemedText style={styles.emptyHistoryText}>No games completed yet</ThemedText>
-              <ThemedText style={styles.emptyHistorySubtext}>
-                Complete your first game to see your scores here
+        <ThemedView style={styles.content}>
+          {/* Current and Highest Score Cards */}
+          <ThemedView style={styles.topScoresSection}>
+            {renderScoreCard(scoreStats.currentScore, 'Current Game')}
+            {renderScoreCard(scoreStats.highestScore, 'Personal Best', true)}
+          </ThemedView>
+
+          {/* Score History */}
+          <ThemedView style={styles.historySection}>
+            <ThemedView style={styles.sectionHeader}>
+              <ThemedText style={styles.sectionTitle}>Score History</ThemedText>
+              <ThemedText style={styles.sectionSubtitle}>
+                {scoreStats.allScores.length} game{scoreStats.allScores.length !== 1 ? 's' : ''} played
               </ThemedText>
             </ThemedView>
-          )}
+
+            {scoreStats.allScores.length > 0 ? (
+              <ThemedView style={styles.historyList}>
+                {(() => {
+                  const len = scoreStats.allScores.length;
+                  const midIndex = Math.floor((len - 1) / 2); // place roughly in the middle
+                  return scoreStats.allScores.map((score, index) => (
+                    <React.Fragment key={score.id}>
+                      {renderScoreHistoryItem(score, index)}
+                      {index === midIndex && <NativeScoreRow />}
+                    </React.Fragment>
+                  ));
+                })()}
+              </ThemedView>
+            ) : (
+              <ThemedView style={styles.emptyHistory}>
+                <IconSymbol name="chart.bar" size={48} color="#9CA3AF" />
+                <ThemedText style={styles.emptyHistoryText}>No games completed yet</ThemedText>
+                <ThemedText style={styles.emptyHistorySubtext}>
+                  Complete your first game to see your scores here
+                </ThemedText>
+              </ThemedView>
+            )}
+          </ThemedView>
         </ThemedView>
+      </ScrollView>
 
-      </ThemedView>
-
-      {/* Banner Ad */}
-      <BannerAd size="medium" />
-    </ScrollView>
+      {/* Fixed Banner Ad at bottom */}
+      <View style={styles.bannerContainer}>
+        <BannerAd size="medium" />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20,
+  },
+  bannerContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
   header: {
     marginTop: 100,

@@ -35,8 +35,20 @@ export function FactDetailModal({ visible, fact, onClose }: FactDetailModalProps
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
+      // Use explanation if available (for false facts), otherwise use the fact text
+      const factContent = fact.explanation || fact.text;
+
+      // Build the message with source URL if available
+      let message = `Fun Fact: ${factContent}\n\nSource: ${fact.source}`;
+
+      if (fact.source_url) {
+        message += `\n${fact.source_url}`;
+      }
+
+      message += `\n\nShared from Fun Facts App`;
+
       await Share.share({
-        message: `Fun Fact: ${fact.text}\n\nSource: ${fact.source}\n\nShared from Fun Facts App`,
+        message: message,
         title: 'Amazing Fun Fact!'
       });
     } catch (error) {
@@ -101,7 +113,7 @@ export function FactDetailModal({ visible, fact, onClose }: FactDetailModalProps
         >
           <ThemedView style={styles.factCard}>
             <ThemedText style={styles.factText}>
-              {fact.text}
+              {fact.explanation || fact.text}
             </ThemedText>
           </ThemedView>
 
@@ -128,12 +140,12 @@ export function FactDetailModal({ visible, fact, onClose }: FactDetailModalProps
               </ThemedView>
             )}
 
-            {/* Attribution for Open Trivia Database */}
-            {fact.source_url === 'https://opentdb.com/' && (
+            {/* Attribution for Useless Facts API */}
+            {fact.source_url && fact.source_url.includes('uselessfacts.jsph.pl') && (
               <ThemedView style={styles.attributionContainer}>
                 <IconSymbol name="info.circle" size={16} color="#9CA3AF" />
                 <ThemedText style={styles.attributionText}>
-                  Licensed under Creative Commons BY-SA 4.0 • Data from Open Trivia Database
+                  Fact provided by Useless Facts API • uselessfacts.jsph.pl
                 </ThemedText>
               </ThemedView>
             )}

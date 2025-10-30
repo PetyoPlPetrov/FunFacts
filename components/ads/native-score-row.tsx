@@ -56,11 +56,26 @@ export function NativeScoreRow() {
   if (!adFeatures.native) return null;
   if (!nativeAd) {
     // Lightweight placeholder to keep spacing consistent while loading
-    return <View style={styles.row}><Text style={styles.body}>Sponsored</Text></View>;
+    return (
+      <View style={styles.row}>
+        <View style={styles.sponsoredBadge}>
+          <Text style={styles.sponsoredText}>Sponsored</Text>
+        </View>
+        <View style={styles.leftStub} />
+        <View style={styles.middle}>
+          <Text style={styles.body}>Loading ad...</Text>
+        </View>
+      </View>
+    );
   }
 
   return (
     <NativeAdView nativeAd={nativeAd} style={styles.row}>
+      {/* Sponsored label */}
+      <View style={styles.sponsoredBadge}>
+        <Text style={styles.sponsoredText}>Ad</Text>
+      </View>
+
       {/* Left: rank circle placeholder to match list layout */}
       <View style={styles.leftStub} />
 
@@ -79,7 +94,9 @@ export function NativeScoreRow() {
       {/* Right: CTA */}
       {(nativeAd as any).callToAction ? (
         <NativeAsset assetType={NativeAssetType.CALL_TO_ACTION}>
-          <Text style={styles.cta} numberOfLines={1}>{(nativeAd as any).callToAction}</Text>
+          <View style={styles.ctaContainer}>
+            <Text style={styles.cta} numberOfLines={1}>{(nativeAd as any).callToAction}</Text>
+          </View>
         </NativeAsset>
       ) : null}
     </NativeAdView>
@@ -91,11 +108,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFFBF5',
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: '#FFE4B5',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    shadowColor: '#000000',
+  },
+  sponsoredBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#FFD700',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    zIndex: 10,
+  },
+  sponsoredText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#000000',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   leftStub: {
     backgroundColor: '#F3F4F6',
@@ -109,7 +151,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   headline: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#111827',
   },
@@ -118,16 +160,20 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 2,
   },
-  cta: {
-    backgroundColor: '#111827',
-    color: '#FFFFFF',
+  ctaContainer: {
+    backgroundColor: '#FF385C',
+    borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 16,
-    overflow: 'hidden',
     minWidth: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cta: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
     textAlign: 'center',
-    fontWeight: '600',
   },
 });
 

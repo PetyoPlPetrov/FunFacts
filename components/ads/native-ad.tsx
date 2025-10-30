@@ -1,127 +1,164 @@
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { adFeatures } from '@/services/ads';
-import * as Haptics from 'expo-haptics';
-import React from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { adFeatures, adUnitIds } from '@/services/ads';
+import React, { useEffect, useState } from 'react';
+import { Platform, StyleSheet, Text, View, Image, ActivityIndicator } from 'react-native';
+import {
+  NativeAd as GoogleNativeAd,
+  NativeAdView,
+  NativeAsset,
+  NativeAssetType,
+  NativeMediaView,
+  TestIds,
+} from 'react-native-google-mobile-ads';
 
 interface NativeAdProps {
   style?: any;
   compact?: boolean;
 }
 
-// Mock native ad data - more text-focused and contextual
-const mockNativeAds = [
-  {
-    id: '1',
-    headline: 'Discover More Amazing Facts',
-    description: 'Get unlimited access to over 10,000 fascinating facts from around the world.',
-    brandName: 'FactVault Pro',
-    ctaText: 'Learn More',
-    icon: 'book.fill' as const,
-    bgColor: '#F3F4F6',
-    textColor: '#374151',
-    accentColor: '#FF5A5F',
-  },
-  {
-    id: '2',
-    headline: 'Test Your Knowledge',
-    description: 'Challenge yourself with fun trivia games based on interesting facts and science.',
-    brandName: 'BrainQuiz',
-    ctaText: 'Play Quiz',
-    icon: 'questionmark.circle.fill' as const,
-    bgColor: '#FEF3C7',
-    textColor: '#92400E',
-    accentColor: '#00A699',
-  },
-  {
-    id: '3',
-    headline: 'Learn Something New Daily',
-    description: 'Join millions discovering fascinating facts with our daily newsletter.',
-    brandName: 'Daily Wonder',
-    ctaText: 'Subscribe',
-    icon: 'envelope.fill' as const,
-    bgColor: '#DBEAFE',
-    textColor: '#1E40AF',
-    accentColor: '#767676',
-  },
-  {
-    id: '4',
-    headline: 'Expand Your Mind',
-    description: 'Access premium educational content from leading universities and experts.',
-    brandName: 'MindExpand',
-    ctaText: 'Start Free',
-    icon: 'graduationcap.fill' as const,
-    bgColor: '#D1FAE5',
-    textColor: '#065F46',
-    accentColor: '#FF5A5F',
-  }
-] as const;
-
 export function NativeAd({ style, compact = false }: NativeAdProps) {
-  // If native ads are disabled, render nothing
-  // Randomly select an ad
-  const ad = React.useMemo(() =>
-    mockNativeAds[Math.floor(Math.random() * mockNativeAds.length)],
-    []
-  );
+  const [nativeAd, setNativeAd] = useState<GoogleNativeAd | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  const handleAdClick = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    console.log(`Mock native ad clicked: ${ad.headline}`);
-    // In real implementation, this would track ad clicks and open ad destination
-  };
-  
+  useEffect(() => {
+    if (!adFeatures.native) {
+      setLoading(false);
+      return;
+    }
+    if (Platform.OS === 'web') {
+      setLoading(false);
+      return;
+    }
+
+    // Get the appropriate ad unit ID based on platform and dev mode
+    const adUnitId = Platform.OS === 'ios'
+      ? adUnitIds.ios.native
+      : adUnitIds.android.native;
+
+    if (!adUnitId) {
+      setLoading(false);
+      return;
+    }
+
+    // Create and load native ad
+    GoogleNativeAd.createForAdRequest(adUnitId, {
+      requestNonPersonalizedAdsOnly: false,
+    })
+      .then((ad) => {
+        if (__DEV__) console.log('[NativeAd] Ad loaded successfully', ad);
+        setNativeAd(ad);
+        setLoading(false);
+        setError(false);
+      })
+      .catch((err) => {
+        if (__DEV__) console.log('[NativeAd] Failed to load:', err);
+        setLoading(false);
+        setError(true);
+      });
+
+    // Cleanup
+    return () => {
+      if (nativeAd) {
+        nativeAd.destroy?.();
+      }
+    };
+  }, []);
+
   if (!adFeatures.native) return null;
+  if (Platform.OS === 'web') return null;
+
+  // Show loading state
+  if (loading) {
+    return (
+      <View style={[styles.container, style]}>
+        <ActivityIndicator size="small" color="#9CA3AF" />
+        <Text style={styles.loadingText}>Loading ad...</Text>
+      </View>
+    );
+  }
+
+  // Show error state or hide if failed
+  if (error || !nativeAd) {
+    if (__DEV__) {
+      return (
+        <View style={[styles.container, style]}>
+          <Text style={styles.errorText}>Ad failed to load</Text>
+        </View>
+      );
+    }
+    return null;
+  }
 
   return (
-    <View style={[styles.container, { backgroundColor: ad.bgColor }, style]}>
-      <Pressable onPress={handleAdClick} style={styles.pressable}>
-        {/* Ad Label */}
-        <View style={[styles.adLabel, { backgroundColor: ad.accentColor }]}>
-          <Text style={styles.adLabelText}>Sponsored</Text>
+    <View style={[styles.container, style]}>
+      <NativeAdView nativeAd={nativeAd} style={styles.adView}>
+        {/* Sponsored label */}
+        <View style={styles.sponsoredBadge}>
+          <Text style={styles.sponsoredText}>Ad</Text>
         </View>
 
-        <View style={[styles.content, compact && styles.compactContent]}>
+        <View style={styles.content}>
           {/* Icon */}
-          <View style={[styles.iconContainer, { backgroundColor: ad.accentColor }]}>
-            <IconSymbol name={ad.icon} size={compact ? 16 : 20} color="#FFFFFF" />
-          </View>
+          {nativeAd.icon && (
+            <NativeAsset assetType={NativeAssetType.ICON}>
+              <View style={styles.iconContainer}>
+                <Image
+                  source={{ uri: nativeAd.icon.url }}
+                  style={styles.icon}
+                  resizeMode="contain"
+                />
+              </View>
+            </NativeAsset>
+          )}
 
           {/* Text Content */}
           <View style={styles.textContent}>
-            <Text
-              style={[
-                styles.headline,
-                { color: ad.textColor },
-                compact && styles.compactHeadline
-              ]}
-              numberOfLines={compact ? 1 : 2}
-            >
-              {ad.headline}
-            </Text>
-
-            {!compact && (
+            {/* Headline */}
+            <NativeAsset assetType={NativeAssetType.HEADLINE}>
               <Text
-                style={[styles.description, { color: ad.textColor }]}
-                numberOfLines={2}
+                style={[styles.headline, compact && styles.compactHeadline]}
+                numberOfLines={compact ? 1 : 2}
               >
-                {ad.description}
+                {nativeAd.headline}
               </Text>
+            </NativeAsset>
+
+            {/* Body/Tagline */}
+            {!compact && nativeAd.body && (
+              <NativeAsset assetType={NativeAssetType.BODY}>
+                <Text style={styles.body} numberOfLines={2}>
+                  {nativeAd.body}
+                </Text>
+              </NativeAsset>
             )}
 
-            <Text style={[styles.brandName, { color: ad.accentColor }]}>
-              {ad.brandName}
-            </Text>
+            {/* Advertiser */}
+            {nativeAd.advertiser && (
+              <NativeAsset assetType={NativeAssetType.ADVERTISER}>
+                <Text style={styles.advertiser}>
+                  {nativeAd.advertiser}
+                </Text>
+              </NativeAsset>
+            )}
           </View>
 
-          {/* CTA Button */}
-          <View style={styles.ctaContainer}>
-            <View style={[styles.ctaButton, { backgroundColor: ad.accentColor }]}>
-              <Text style={styles.ctaText}>{ad.ctaText}</Text>
-            </View>
-          </View>
+          {/* Call to Action Button */}
+          {nativeAd.callToAction && (
+            <NativeAsset assetType={NativeAssetType.CALL_TO_ACTION}>
+              <View style={styles.ctaButton}>
+                <Text style={styles.ctaText}>
+                  {nativeAd.callToAction}
+                </Text>
+              </View>
+            </NativeAsset>
+          )}
         </View>
-      </Pressable>
+
+        {/* Media View for images/videos */}
+        {!compact && (
+          <NativeMediaView style={styles.mediaView} />
+        )}
+      </NativeAdView>
     </View>
   );
 }
@@ -129,34 +166,49 @@ export function NativeAd({ style, compact = false }: NativeAdProps) {
 const styles = StyleSheet.create({
   container: {
     borderRadius: 12,
-    marginVertical: 8,
-    position: 'relative',
-    overflow: 'hidden',
+    marginVertical: 12,
+    marginHorizontal: 0,
+    backgroundColor: '#FFFFFF',
+    minHeight: 100,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
-        shadowRadius: 2,
+        shadowRadius: 4,
       },
       android: {
         elevation: 2,
       },
     }),
   },
-  pressable: {
-    flex: 1,
+  adView: {
+    width: '100%',
   },
-  adLabel: {
+  loadingText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#9CA3AF',
+    textAlign: 'center',
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#EF4444',
+    textAlign: 'center',
+  },
+  sponsoredBadge: {
     position: 'absolute',
     top: 8,
     right: 8,
+    backgroundColor: '#9CA3AF',
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    zIndex: 1,
+    zIndex: 10,
   },
-  adLabelText: {
+  sponsoredText: {
     fontSize: 9,
     fontWeight: '600',
     color: '#FFFFFF',
@@ -167,21 +219,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     padding: 16,
-    paddingTop: 24, // Account for ad label
-  },
-  compactContent: {
-    padding: 12,
-    paddingTop: 20,
-    alignItems: 'center',
+    paddingTop: 24,
   },
   iconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E5E7EB',
+    overflow: 'hidden',
     marginRight: 12,
-    flexShrink: 0,
+  },
+  icon: {
+    width: 40,
+    height: 40,
   },
   textContent: {
     flex: 1,
@@ -192,37 +242,45 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: 18,
     marginBottom: 4,
+    color: '#1F2937',
   },
   compactHeadline: {
     fontSize: 12,
     marginBottom: 2,
   },
-  description: {
+  body: {
     fontSize: 12,
     lineHeight: 16,
     marginBottom: 6,
-    opacity: 0.8,
+    color: '#6B7280',
   },
-  brandName: {
+  advertiser: {
     fontSize: 10,
     fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.3,
-  },
-  ctaContainer: {
-    justifyContent: 'center',
-    alignItems: 'flex-end',
+    color: '#9CA3AF',
   },
   ctaButton: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: 12,
-    minWidth: 50,
+    backgroundColor: '#FF385C',
     alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 60,
   },
   ctaText: {
     fontSize: 11,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  mediaView: {
+    height: 120,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#E5E7EB',
   },
 });
