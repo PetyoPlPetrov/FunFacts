@@ -56,13 +56,14 @@ expo run:ios                # Build and run iOS app
 Core business logic is centralized in the `services/` directory:
 
 - **facts-api.ts**: Main facts service
-  - Fetches true facts from uselessfacts.jsph.pl API on-demand
-  - Fetches false facts from local `false-facts-api.ts`
-  - Converts between `ApiFact`, `GameFact`, and `EnhancedFact` types
-  - `getRandomGameFact()`: Randomly chooses between API true fact (50%) or local false fact (50%)
-  - Retry logic with exponential backoff (3 attempts with 500ms delay on first load)
-  - Graceful fallback: if API fails, uses local false fact instead
-  - No batching or caching - fetches one fact at a time as needed
+  - Uses 100% static data from `static-facts-data.ts` (no external API calls)
+  - Contains 100 curated facts: 50 true facts and 50 false facts
+  - All facts include explanations and source information
+  - Covers categories: Animals, Science, History, Technology, Geography, Space, Food, Health, Human Body
+  - `getRandomGameFact()`: Randomly selects from true (50%) or false (50%) fact pools
+  - Simulates API delay with random 0.5-1.5 second delay for realistic UX
+  - Avoids showing same facts repeatedly (remembers last 20 facts shown)
+  - No network dependency - works completely offline
 
 - **score-manager.ts**: Score persistence and statistics
   - Uses AsyncStorage for local persistence
@@ -71,10 +72,12 @@ Core business logic is centralized in the `services/` directory:
   - `finalizeScore()`: Saves completed game and checks for new high score
   - `getScoreStats()`: Returns current score, personal best, and all historical scores
 
-- **false-facts-api.ts**: Local collection of curated false facts
-  - 15 convincing false facts across multiple categories
-  - Used for game variety and as fallback when API fails
-  - Each fact includes explanation of why it's false
+- **static-facts-data.ts**: Complete facts database
+  - 100 total facts: 50 true, 50 false
+  - Each fact includes category, explanation, and source
+  - Categories: Animals, Science, History, Technology, Geography, Space, Food, Health, Human Body, Weather, Religion, Biology
+  - True facts are verified interesting facts
+  - False facts are common myths with explanations of why they're false
 
 - **ads.ts**: Google Mobile Ads initialization and configuration
   - Test ads in development, production ad units for Android
@@ -99,9 +102,10 @@ Core business logic is centralized in the `services/` directory:
 ### Key Gameplay Flow
 1. User launches app → `initializeMobileAds()` called in root layout
 2. Main game screen loads → `loadInitialGameState()` resets current score and loads first fact
-3. `factsApi.getRandomGameFact()` → Randomly fetches true fact from API (50%) or false fact from local (50%)
+3. `factsApi.getRandomGameFact()` → Randomly selects true fact (50%) or false fact (50%) from static database with 0.5-1.5s simulated delay
 4. User answers → `handleAnswer()` updates score, saves to context, checks for high score notification
-5. User clicks "New Challenge" → `loadNewGameFact()` fetches next single fact on-demand
+5. User sees result with explanation → "New Challenge" button appears
+6. User clicks "New Challenge" → `generateNewFact()` triggers loading state → `loadNewGameFact()` retrieves next fact with simulated delay
 6. Interstitial ad shown every 4 fact answers
 7. User clicks "Restart" → `performRestart()` finalizes score (if correct answers), resets game
 
@@ -119,16 +123,24 @@ import { useGameContext } from '@/contexts/game-context';
 import { factsApi } from '@/services/facts-api';
 ```
 
-## API Integration Notes
+## Data Architecture
 
-### Facts APIs
-- **Primary**: uselessfacts.jsph.pl - random true facts (external API)
-  - Endpoint: `GET /api/v2/facts/random`
-  - Returns single random fact
-  - No bulk endpoint available
-- **Secondary**: Local false facts from `false-facts-api.ts` (15 curated myths)
-- **Strategy**: 50/50 random selection - each fact request has 50% chance of API call (true) or local (false)
-- **On-demand loading**: No caching or batching, fetches one fact per user request
+### Facts Database
+- **100% Static Data**: All facts stored in `static-facts-data.ts`
+- **No External APIs**: App works completely offline
+- **100 Total Facts**: 50 verified true facts + 50 debunked false facts (myths)
+- **Rich Metadata**: Each fact includes:
+  - Unique ID
+  - Fact text
+  - True/False boolean
+  - Category
+  - Explanation (why it's true or why the myth is false)
+  - Source attribution
+- **Smart Randomization**:
+  - 50/50 split between true and false facts
+  - Remembers last 20 facts shown to avoid immediate repeats
+  - Automatically resets when all facts have been seen
+- **Simulated Loading**: Random 0.5-1.5 second delay mimics API behavior for better UX
 
 ### Ad Integration
 - Uses `react-native-google-mobile-ads` SDK

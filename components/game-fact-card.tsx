@@ -142,45 +142,25 @@ export function GameFactCard({
       withSpring(1, { duration: 100 })
     );
 
-    // Set answer state and show result
-    setAnswerState(isCorrect ? 'correct' : 'incorrect');
+    // Set answer state and show result immediately
+    setAnswerState('revealed');
+    setShowExplanation(true);
 
-    // Show explanation after a delay
-    setTimeout(() => {
-      setShowExplanation(true);
-      setAnswerState('revealed');
-      // Start tap hint animation when explanation is shown
-      startTapHintAnimation();
-    }, 1500);
+    // Start tap hint animation when explanation is shown
+    startTapHintAnimation();
 
-    // Notify parent component
+    // Notify parent component immediately
     onAnswer(userGuess, isCorrect);
   };
 
   const getCardBackgroundColor = () => {
-    switch (answerState) {
-      case 'correct':
-        return '#E8F5E9'; // Light green (Airbnb style)
-      case 'incorrect':
-        return '#FFEBEE'; // Light red (Airbnb style)
-      case 'revealed':
-        return '#F7F7F7'; // Light gray
-      default:
-        return '#FFFFFF'; // White
-    }
+    // Always white background, no color changes
+    return '#FFFFFF';
   };
 
   const getCardBorderColor = () => {
-    switch (answerState) {
-      case 'correct':
-        return '#00A86B'; // Jade green
-      case 'incorrect':
-        return '#DC3545'; // Crimson red
-      case 'revealed':
-        return '#DDDDDD'; // Gray
-      default:
-        return '#DDDDDD'; // Light gray
-    }
+    // Always light gray border, no color changes
+    return '#DDDDDD';
   };
 
   const handleInfoPress = () => {
@@ -245,38 +225,17 @@ export function GameFactCard({
           <ThemedView style={styles.explanationContainer}>
             <ThemedView style={styles.answerReveal}>
               <IconSymbol
-                name={
-                  gameFact.wasGuessCorrect !== undefined
-                    ? (gameFact.wasGuessCorrect ? "checkmark.circle.fill" : "xmark.circle.fill")
-                    : (gameFact.isTrue ? "checkmark.circle.fill" : "xmark.circle.fill")
-                }
+                name={gameFact.wasGuessCorrect ? "checkmark.circle.fill" : "xmark.circle.fill"}
                 size={28}
-                color={
-                  gameFact.wasGuessCorrect !== undefined
-                    ? (gameFact.wasGuessCorrect ? "#00A86B" : "#DC3545")
-                    : (gameFact.isTrue ? "#00A86B" : "#DC3545")
-                }
+                color={gameFact.wasGuessCorrect ? "#00A86B" : "#DC3545"}
               />
               <ThemedText style={styles.answerText}>
-                {gameFact.wasGuessCorrect !== undefined ? (
-                  <>
-                    Your guess is <Text style={{
-                      fontWeight: 'bold',
-                      color: gameFact.wasGuessCorrect ? '#00A86B' : '#DC3545'
-                    }}>
-                      {gameFact.wasGuessCorrect ? 'CORRECT' : 'INCORRECT'}
-                    </Text>
-                  </>
-                ) : (
-                  <>
-                    The fact is <Text style={{
-                      fontWeight: 'bold',
-                      color: gameFact.isTrue ? '#00A86B' : '#DC3545'
-                    }}>
-                      {gameFact.isTrue ? 'TRUE' : 'FALSE'}
-                    </Text>
-                  </>
-                )}
+                Your guess is <Text style={{
+                  fontWeight: 'bold',
+                  color: gameFact.wasGuessCorrect ? '#00A86B' : '#DC3545'
+                }}>
+                  {gameFact.wasGuessCorrect ? 'CORRECT' : 'INCORRECT'}
+                </Text>
               </ThemedText>
             </ThemedView>
 
@@ -284,49 +243,6 @@ export function GameFactCard({
               <ThemedText style={styles.explanationText}>
                 {gameFact.explanation}
               </ThemedText>
-            )}
-
-            {/* History Navigation - inside card below explanation */}
-            {showNavigation && (
-              <ThemedView style={styles.navigationContainer}>
-                <Pressable
-                  style={[
-                    styles.navArrow,
-                    { opacity: hasPrevious ? 1 : 0.3 }
-                  ]}
-                  onPress={() => {
-                    if (hasPrevious && onPrevious) {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      onPrevious();
-                    }
-                  }}
-                  disabled={!hasPrevious}
-                >
-                  <IconSymbol name="chevron.left" size={20} color="#6B6B6B" />
-                </Pressable>
-
-                <ThemedView style={styles.navigationIndicator}>
-                  <ThemedText style={styles.navigationText}>
-                    {navigationText}
-                  </ThemedText>
-                </ThemedView>
-
-                <Pressable
-                  style={[
-                    styles.navArrow,
-                    { opacity: hasNext ? 1 : 0.3 }
-                  ]}
-                  onPress={() => {
-                    if (hasNext && onNext) {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      onNext();
-                    }
-                  }}
-                  disabled={!hasNext}
-                >
-                  <IconSymbol name="chevron.right" size={20} color="#6B6B6B" />
-                </Pressable>
-              </ThemedView>
             )}
           </ThemedView>
         )}
@@ -340,6 +256,49 @@ export function GameFactCard({
         )}
         </ThemedView>
       </Pressable>
+
+      {/* History Navigation - below card */}
+      {showNavigation && (
+        <ThemedView style={styles.navigationContainer}>
+          <Pressable
+            style={[
+              styles.navArrow,
+              { opacity: hasPrevious ? 1 : 0.3 }
+            ]}
+            onPress={() => {
+              if (hasPrevious && onPrevious) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onPrevious();
+              }
+            }}
+            disabled={!hasPrevious}
+          >
+            <IconSymbol name="chevron.left" size={20} color="#6B6B6B" />
+          </Pressable>
+
+          <ThemedView style={styles.navigationIndicator}>
+            <ThemedText style={styles.navigationText}>
+              {navigationText}
+            </ThemedText>
+          </ThemedView>
+
+          <Pressable
+            style={[
+              styles.navArrow,
+              { opacity: hasNext ? 1 : 0.3 }
+            ]}
+            onPress={() => {
+              if (hasNext && onNext) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onNext();
+              }
+            }}
+            disabled={!hasNext}
+          >
+            <IconSymbol name="chevron.right" size={20} color="#6B6B6B" />
+          </Pressable>
+        </ThemedView>
+      )}
     </AnimatedPressable>
   );
 }
@@ -498,12 +457,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 16,
+    paddingTop: 12,
     paddingBottom: 0,
-    paddingHorizontal: 0,
+    paddingHorizontal: 20,
     backgroundColor: 'transparent',
     gap: 12,
-    marginTop: 8,
+    marginTop: 0,
   },
   navArrow: {
     backgroundColor: '#F7F7F7',

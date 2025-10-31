@@ -38,6 +38,9 @@ export function BannerAd({ size = 'medium', style }: BannerAdProps) {
     console.log('Banner ad failed to load', error);
   };
 
+
+  return null;
+
   return (
     
       <RNGBannerAd

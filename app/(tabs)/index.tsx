@@ -2,7 +2,8 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, Animated as RNAnimated, Easing } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, useAnimatedReaction, runOnJS } from 'react-native-reanimated';
 
 import { BannerAd } from '@/components/ads/banner-ad';
 import { InterstitialAd } from '@/components/ads/interstitial-ad';
@@ -14,6 +15,35 @@ import { ThemedView } from '@/components/themed-view';
 import { useGameContext } from '@/contexts/game-context';
 import { EnhancedFact, factsApi, GameFact } from '@/services/facts-api';
 import { scoreManager } from '@/services/score-manager';
+
+// Loading spinner component with rotation animation
+function LoadingSpinner() {
+  const spinValue = React.useRef(new RNAnimated.Value(0)).current;
+
+  React.useEffect(() => {
+    const spin = () => {
+      spinValue.setValue(0);
+      RNAnimated.timing(spinValue, {
+        toValue: 1,
+        duration: 1000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }).start(() => spin());
+    };
+    spin();
+  }, [spinValue]);
+
+  const rotate = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  return (
+    <RNAnimated.View style={{ transform: [{ rotate }] }}>
+      <IconSymbol name="arrow.clockwise" size={48} color="#F54768" />
+    </RNAnimated.View>
+  );
+}
 
 export default function HomeScreen() {
   const { setCurrentScore, hasShownHighScoreNotification, setHasShownHighScoreNotification } = useGameContext();
@@ -45,34 +75,25 @@ export default function HomeScreen() {
 
   const loadNewGameFact = useCallback(async () => {
     const startTime = Date.now();
-    const queueSizeBefore = factsApi.getQueueSize();
-    
+
     if (__DEV__) {
-      console.log(`[Game] loadNewGameFact() called (queue size: ${queueSizeBefore})`);
+      console.log(`[Game] loadNewGameFact() called`);
     }
-    
-    // Only show loading if queue is empty (will need to fetch)
-    // If queue has facts, it will be instant so no need for loading spinner
-    const needsLoading = queueSizeBefore === 0;
-    if (needsLoading) {
-      setIsLoading(true);
-    }
+
+    setIsLoading(true);
     setError(null);
-    setHasAnswered(false);
 
     try {
       if (__DEV__) {
-        console.log('[Game] Getting fact from queue (instant) or fetching if queue empty...');
+        console.log('[Game] Fetching new fact...');
       }
-      
-      // This will return instantly if queue has facts, or fetch if queue is empty
+
       const gameFact = await factsApi.getRandomGameFact();
-      
+
       const duration = Date.now() - startTime;
-      const queueSizeAfter = factsApi.getQueueSize();
-      
+
       if (__DEV__) {
-        console.log(`[Game] Successfully loaded game fact (${duration}ms, queue now: ${queueSizeAfter}):`, {
+        console.log(`[Game] Successfully loaded game fact (${duration}ms):`, {
           id: gameFact.id,
           isTrue: gameFact.isTrue,
           source: gameFact.source,
@@ -82,10 +103,8 @@ export default function HomeScreen() {
 
       // Set as current unanswered fact (don't add to history until answered)
       setCurrentUnansweredFact(gameFact);
-      // Only set index if there are facts in history, otherwise keep at -1
-      if (gameFactsHistory.length > 0) {
-        setCurrentGameFactIndex(gameFactsHistory.length - 1);
-      }
+      // Don't update currentGameFactIndex here - it should stay pointing to the last answered fact in history
+      // The currentGameFact computed value will use currentUnansweredFact when it's set
 
       // Show interstitial ad every 4 facts
       setFactGenerationCount(prev => {
@@ -112,10 +131,8 @@ export default function HomeScreen() {
       }
       const falseFact = factsApi.getFalseGameFact();
       setCurrentUnansweredFact(falseFact);
-      // Only set index if there are facts in history, otherwise keep at -1
-      if (gameFactsHistory.length > 0) {
-        setCurrentGameFactIndex(gameFactsHistory.length - 1);
-      }
+      // Don't update currentGameFactIndex here - it should stay pointing to the last answered fact in history
+      // The currentGameFact computed value will use currentUnansweredFact when it's set
 
       // Show interstitial ad every 4 facts (fallback case)
       setFactGenerationCount(prev => {
@@ -131,7 +148,7 @@ export default function HomeScreen() {
         console.log('[Game] loadNewGameFact() completed, loading state set to false');
       }
     }
-  }, [gameFactsHistory.length]);
+  }, []);
 
   const loadInitialGameState = useCallback(async () => {
     if (__DEV__) {
@@ -161,21 +178,13 @@ export default function HomeScreen() {
 
   // Load initial fact and current score on mount
   useEffect(() => {
-    // Initialize the fact queue with static starter facts for instant loading
-    factsApi.initializeQueue();
-
-    // Load the initial game state (will get first fact from queue - instant!)
+    // Load the initial game state
     loadInitialGameState();
   }, [loadInitialGameState]);
 
   const loadNewGameFactForRestart = async () => {
-    const queueSize = factsApi.getQueueSize();
-    // Only show loading if queue is empty
-    if (queueSize === 0) {
-      setIsLoading(true);
-    }
+    setIsLoading(true);
     setError(null);
-    setHasAnswered(false);
 
     try {
       const gameFact = await factsApi.getRandomGameFact();
@@ -184,6 +193,9 @@ export default function HomeScreen() {
       setCurrentUnansweredFact(gameFact);
       // For restart, always set index to -1 since we cleared history
       setCurrentGameFactIndex(-1);
+
+      // Reset hasAnswered state NOW that the fact is loaded
+      setHasAnswered(false);
 
       // Reset fact generation count for restart
       setFactGenerationCount(0);
@@ -199,6 +211,9 @@ export default function HomeScreen() {
       // For restart, always set index to -1 since we cleared history
       setCurrentGameFactIndex(-1);
 
+      // Reset hasAnswered state NOW that the fact is loaded
+      setHasAnswered(false);
+
       // Reset fact generation count for restart
       setFactGenerationCount(0);
     } finally {
@@ -208,6 +223,10 @@ export default function HomeScreen() {
 
   const generateNewFact = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    // Set loading state first to prevent flash of old card
+    setIsLoading(true);
+    // Reset hasAnswered after setting loading state
+    setHasAnswered(false);
     loadNewGameFact();
   };
 
@@ -322,10 +341,7 @@ export default function HomeScreen() {
     // Close settings modal
     setSettingsModalVisible(false);
 
-    // Reinitialize queue for fresh start
-    factsApi.initializeQueue();
-
-    // Load a new fact to start fresh (should be instant from queue)
+    // Load a new fact to start fresh
     await loadNewGameFactForRestart();
   };
 
@@ -455,7 +471,7 @@ export default function HomeScreen() {
       <ThemedView style={styles.cardContainer}>
         {isLoading ? (
           <ThemedView style={styles.loadingCard}>
-            <ActivityIndicator size="large" color="#F54768" />
+            <LoadingSpinner />
             <ThemedText style={styles.loadingText}>
               {currentGameFact ? 'Loading next challenge...' : 'Loading your first challenge...'}
             </ThemedText>
@@ -485,7 +501,7 @@ export default function HomeScreen() {
           />
         ) : (
           <ThemedView style={styles.loadingCard}>
-            <ActivityIndicator size="large" color="#F54768" />
+            <LoadingSpinner />
             <ThemedText style={styles.loadingText}>Loading your first challenge...</ThemedText>
           </ThemedView>
         )}
