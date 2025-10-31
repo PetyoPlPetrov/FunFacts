@@ -36,20 +36,18 @@ export function NativeScoreRow() {
     };
   }, []);
 
-  // Log native ad events on Android while testing
+  // Log native ad events while testing
   useEffect(() => {
     if (!nativeAd) return;
-    const N = NativeAdEventType as any;
     const listeners = [
-      (nativeAd as any).addAdEventListener?.(N.LOADED ?? 'loaded', () => __DEV__ && console.log('[Ads] Native LOADED')),
-      (nativeAd as any).addAdEventListener?.(N.OPENED ?? 'opened', () => __DEV__ && console.log('[Ads] Native OPENED')),
-      (nativeAd as any).addAdEventListener?.(N.CLICKED ?? 'clicked', () => __DEV__ && console.log('[Ads] Native CLICKED')),
-      (nativeAd as any).addAdEventListener?.(N.IMPRESSION ?? 'impression', () => __DEV__ && console.log('[Ads] Native IMPRESSION')),
-      (nativeAd as any).addAdEventListener?.(N.CLOSED ?? 'closed', () => __DEV__ && console.log('[Ads] Native CLOSED')),
-      (nativeAd as any).addAdEventListener?.(N.ERROR ?? 'error', (e: any) => __DEV__ && console.log('[Ads] Native ERROR', e)),
-    ].filter(Boolean) as any[];
+      nativeAd.addAdEventListener(NativeAdEventType.IMPRESSION, () => __DEV__ && console.log('[Ads] Native IMPRESSION')),
+      nativeAd.addAdEventListener(NativeAdEventType.CLICKED, () => __DEV__ && console.log('[Ads] Native CLICKED')),
+      nativeAd.addAdEventListener(NativeAdEventType.OPENED, () => __DEV__ && console.log('[Ads] Native OPENED')),
+      nativeAd.addAdEventListener(NativeAdEventType.CLOSED, () => __DEV__ && console.log('[Ads] Native CLOSED')),
+      nativeAd.addAdEventListener(NativeAdEventType.PAID, (payload) => __DEV__ && console.log('[Ads] Native PAID', payload)),
+    ];
     return () => {
-      listeners.forEach((l: any) => l.remove?.());
+      listeners.forEach((listener) => listener.remove());
     };
   }, [nativeAd]);
 

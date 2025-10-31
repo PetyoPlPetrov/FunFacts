@@ -628,7 +628,8 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    marginTop: 50,
+    marginTop: 100,
+    //paddingTop: 40,
     paddingBottom: 30,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 24,
