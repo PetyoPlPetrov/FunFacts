@@ -53,8 +53,15 @@ export default function HomeScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [interstitialVisible, setInterstitialVisible] = useState(false);
-  const [, setFactGenerationCount] = useState(0);
+  const [answerCount, setAnswerCount] = useState(0);
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
+
+  // Debug: Log when interstitialVisible changes
+  useEffect(() => {
+    if (__DEV__) {
+      console.log(`[Ads] interstitialVisible changed to: ${interstitialVisible}, current answerCount: ${answerCount}`);
+    }
+  }, [interstitialVisible, answerCount]);
 
   // Unified guessing game states
   const [gameFactsHistory, setGameFactsHistory] = useState<GameFact[]>([]);
@@ -105,15 +112,6 @@ export default function HomeScreen() {
       setCurrentUnansweredFact(gameFact);
       // Don't update currentGameFactIndex here - it should stay pointing to the last answered fact in history
       // The currentGameFact computed value will use currentUnansweredFact when it's set
-
-      // Show interstitial ad every 4 facts
-      setFactGenerationCount(prev => {
-        const newCount = prev + 1;
-        if (newCount % 4 === 0) {
-          setTimeout(() => setInterstitialVisible(true), 300);
-        }
-        return newCount;
-      });
     } catch (err) {
       const duration = Date.now() - startTime;
       if (__DEV__) {
@@ -133,15 +131,6 @@ export default function HomeScreen() {
       setCurrentUnansweredFact(falseFact);
       // Don't update currentGameFactIndex here - it should stay pointing to the last answered fact in history
       // The currentGameFact computed value will use currentUnansweredFact when it's set
-
-      // Show interstitial ad every 4 facts (fallback case)
-      setFactGenerationCount(prev => {
-        const newCount = prev + 1;
-        if (newCount % 4 === 0) {
-          setTimeout(() => setInterstitialVisible(true), 300);
-        }
-        return newCount;
-      });
     } finally {
       setIsLoading(false);
       if (__DEV__) {
@@ -196,9 +185,6 @@ export default function HomeScreen() {
 
       // Reset hasAnswered state NOW that the fact is loaded
       setHasAnswered(false);
-
-      // Reset fact generation count for restart
-      setFactGenerationCount(0);
     } catch (err) {
       if (__DEV__) {
         console.error('Error loading game fact:', err);
@@ -213,9 +199,6 @@ export default function HomeScreen() {
 
       // Reset hasAnswered state NOW that the fact is loaded
       setHasAnswered(false);
-
-      // Reset fact generation count for restart
-      setFactGenerationCount(0);
     } finally {
       setIsLoading(false);
     }
@@ -333,6 +316,7 @@ export default function HomeScreen() {
     setTotalScore({ correct: 0, total: 0 });
     setHasAnswered(false);
     setFactsHistory([]);
+    setAnswerCount(0);
 
     // Reset context states
     setCurrentScore({ correct: 0, total: 0 });
@@ -356,6 +340,27 @@ export default function HomeScreen() {
 
     // Update context with current score for scores tab
     setCurrentScore(newScore);
+
+    // Increment answer count and show ad every 4 answers
+    setAnswerCount(prev => {
+      const newCount = prev + 1;
+      if (__DEV__) {
+        console.log(`[Ads] Answer count: ${newCount}, modulo 4 = ${newCount % 4}`);
+      }
+      if (newCount % 4 === 0) {
+        if (__DEV__) {
+          console.log(`[Ads] ✅ TRIGGERING INTERSTITIAL AD after ${newCount} answers`);
+          console.log(`[Ads] Setting interstitialVisible to true in 500ms...`);
+        }
+        setTimeout(() => {
+          if (__DEV__) {
+            console.log(`[Ads] ⚡ NOW calling setInterstitialVisible(true)`);
+          }
+          setInterstitialVisible(true);
+        }, 500);
+      }
+      return newCount;
+    });
 
     // Check for new high score and show notification if needed
     if (!hasShownHighScoreNotification && newScore.correct > 0) {

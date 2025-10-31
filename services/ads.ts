@@ -11,7 +11,7 @@ import {
 export const adUnitIds = {
   ios: {
     banner: __DEV__ ? TestIds.ADAPTIVE_BANNER : null, // TODO: Add production iOS banner unit ID
-    interstitial: null, // iOS not configured
+    interstitial: __DEV__ ? TestIds.INTERSTITIAL : null, // Use test ads in dev, TODO: Add production iOS interstitial unit ID
     native: __DEV__ ? TestIds.NATIVE : null, // TODO: Add production iOS native unit ID
   },
   android: {
@@ -49,41 +49,59 @@ export function initializeMobileAds() {
 }
 
 export async function showInterstitial(onClosed?: () => void) {
+  if (__DEV__) console.log('[Ads] showInterstitial() called');
+
   if (!adFeatures.interstitial) {
+    if (__DEV__) console.log('[Ads] ❌ Interstitials disabled in features');
     onClosed?.();
     return;
   }
   if (Platform.OS === 'web') {
+    if (__DEV__) console.log('[Ads] ❌ Platform is web, not showing native ad');
     onClosed?.();
     return;
   }
 
   const unitId = Platform.OS === 'ios' ? adUnitIds.ios.interstitial : adUnitIds.android.interstitial;
+  if (__DEV__) console.log(`[Ads] Platform: ${Platform.OS}, Unit ID: ${unitId}`);
+
   if (!unitId) {
+    if (__DEV__) console.log('[Ads] ❌ No unit ID configured');
     onClosed?.();
     return;
   }
+
+  if (__DEV__) console.log('[Ads] ✅ Creating InterstitialAd with unit ID:', unitId);
   const interstitial = InterstitialAd.createForAdRequest(unitId);
 
   return new Promise<void>((resolve) => {
     const unsubscribeLoaded = interstitial.addAdEventListener(AdEventType.LOADED, () => {
+      if (__DEV__) console.log('[Ads] 📦 Interstitial LOADED - showing ad now');
       interstitial.show();
     });
     const unsubscribeOpened = interstitial.addAdEventListener(AdEventType.OPENED, () => {
+      if (__DEV__) console.log('[Ads] 👁️ Interstitial OPENED - ad is visible to user');
     });
     const unsubscribeClosed = interstitial.addAdEventListener(AdEventType.CLOSED, () => {
+      if (__DEV__) console.log('[Ads] 🔚 Interstitial CLOSED - cleaning up');
       unsubscribeLoaded();
       unsubscribeOpened();
       unsubscribeClosed();
+      unsubscribeError();
       onClosed?.();
       resolve();
     });
     const unsubscribeError = interstitial.addAdEventListener(AdEventType.ERROR, (error) => {
-      if (__DEV__) console.log('[Ads] Interstitial error:', error);
-
+      if (__DEV__) console.log('[Ads] ❌ Interstitial ERROR:', JSON.stringify(error));
+      unsubscribeLoaded();
+      unsubscribeOpened();
+      unsubscribeClosed();
+      unsubscribeError();
+      onClosed?.();
+      resolve();
     });
 
-    if (__DEV__) console.log('[Ads] Interstitial load()');
+    if (__DEV__) console.log('[Ads] 🔄 Calling interstitial.load()...');
     interstitial.load();
   });
 }

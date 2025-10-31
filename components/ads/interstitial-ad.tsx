@@ -48,8 +48,6 @@ const mockInterstitialAds = [
 ] as const;
 
 export function InterstitialAd({ visible, onClose, onAdClick }: InterstitialAdProps) {
-  // If interstitials are disabled, render nothing
-  if (!adFeatures.interstitial) return null;
   const [showCloseButton, setShowCloseButton] = React.useState(false);
   const [timeLeft, setTimeLeft] = React.useState(5);
 
@@ -95,15 +93,22 @@ export function InterstitialAd({ visible, onClose, onAdClick }: InterstitialAdPr
   // Guard against duplicate shows (e.g., StrictMode double effect in dev)
   const requestedRef = useRef(false);
   useEffect(() => {
+    if (__DEV__) {
+      console.log(`[Ads] InterstitialAd useEffect: visible=${visible}, platform=${RNPlatform.OS}, requestedRef=${requestedRef.current}`);
+    }
     if (visible && RNPlatform.OS !== 'web' && !requestedRef.current) {
       requestedRef.current = true;
-      if (__DEV__) console.log('[Ads] Interstitial visible=true → showInterstitial()');
+      if (__DEV__) console.log('[Ads] ✅ Interstitial visible=true → calling showInterstitial()');
       showInterstitial(() => {
+        if (__DEV__) console.log('[Ads] 🔚 showInterstitial callback - ad closed');
         requestedRef.current = false;
         onClose();
       });
     }
   }, [visible, onClose]);
+
+  // If interstitials are disabled, render nothing (after all hooks)
+  if (!adFeatures.interstitial) return null;
 
   if (!visible || RNPlatform.OS !== 'web') return null;
 
