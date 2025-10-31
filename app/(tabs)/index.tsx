@@ -6,6 +6,7 @@ import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, Style
 
 import { BannerAd } from '@/components/ads/banner-ad';
 import { InterstitialAd } from '@/components/ads/interstitial-ad';
+import { CircularProgress } from '@/components/circular-progress';
 import { FactDetailModal } from '@/components/fact-detail-modal';
 import { GameFactCard } from '@/components/game-fact-card';
 import { ThemedText } from '@/components/themed-text';
@@ -13,13 +14,6 @@ import { ThemedView } from '@/components/themed-view';
 import { useGameContext } from '@/contexts/game-context';
 import { EnhancedFact, factsApi, GameFact } from '@/services/facts-api';
 import { scoreManager } from '@/services/score-manager';
-import mobileAds from 'react-native-google-mobile-ads';
-
-mobileAds()
-  .initialize()
-  .then(adapterStatuses => {
-    // Initialization complete!
-  });
 
 export default function HomeScreen() {
   const { setCurrentScore, hasShownHighScoreNotification, setHasShownHighScoreNotification } = useGameContext();
@@ -55,28 +49,57 @@ export default function HomeScreen() {
   }, []);
 
   const loadInitialGameState = async () => {
+    if (__DEV__) {
+      console.log('[Game] Starting initial game state load');
+    }
+    
     // Always start fresh - clear any previously saved current score
     try {
       await scoreManager.resetCurrentScore();
       // Ensure we start with 0/0 every time
       setTotalScore({ correct: 0, total: 0 });
+      if (__DEV__) {
+        console.log('[Game] Score reset complete');
+      }
     } catch (error) {
       if (__DEV__) {
-        console.error('Error resetting current score:', error);
+        console.error('[Game] Error resetting current score:', error);
       }
     }
 
     // Load initial fact
+    if (__DEV__) {
+      console.log('[Game] Loading initial fact...');
+    }
     loadNewGameFact();
   };
 
   const loadNewGameFact = async () => {
+    const startTime = Date.now();
+    if (__DEV__) {
+      console.log('[Game] loadNewGameFact() called');
+    }
+    
     setIsLoading(true);
     setError(null);
     setHasAnswered(false);
 
     try {
+      if (__DEV__) {
+        console.log('[Game] Fetching random game fact from API...');
+      }
+      
       const gameFact = await factsApi.getRandomGameFact();
+      
+      const duration = Date.now() - startTime;
+      if (__DEV__) {
+        console.log(`[Game] Successfully loaded game fact (${duration}ms):`, {
+          id: gameFact.id,
+          isTrue: gameFact.isTrue,
+          source: gameFact.source,
+          textPreview: gameFact.text.substring(0, 50) + '...'
+        });
+      }
 
       // Set as current unanswered fact (don't add to history until answered)
       setCurrentUnansweredFact(gameFact);
@@ -94,12 +117,20 @@ export default function HomeScreen() {
         return newCount;
       });
     } catch (err) {
+      const duration = Date.now() - startTime;
       if (__DEV__) {
-        console.error('Error loading game fact:', err);
+        console.error(`[Game] Error loading game fact after ${duration}ms:`, err);
+        console.error('[Game] Error details:', {
+          message: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined
+        });
       }
      // setError('Failed to load fact. Please try again.');
 
       // Fallback to false fact
+      if (__DEV__) {
+        console.log('[Game] Falling back to local false fact');
+      }
       const falseFact = factsApi.getFalseGameFact();
       setCurrentUnansweredFact(falseFact);
       // Only set index if there are facts in history, otherwise keep at -1
@@ -117,6 +148,9 @@ export default function HomeScreen() {
       });
     } finally {
       setIsLoading(false);
+      if (__DEV__) {
+        console.log('[Game] loadNewGameFact() completed, loading state set to false');
+      }
     }
   };
 
@@ -371,45 +405,21 @@ export default function HomeScreen() {
           </ThemedText>
 
           <ThemedView style={styles.statsRow}>
-            <ThemedView style={styles.scoreContainerWrapper}>
-              <LinearGradient
-                colors={
-                  totalScore.total > 0
-                    ? [
-                        '#00A86B', // Jade green
-                        '#00A86B',
-                        '#DC3545', // Crimson red
-                        '#DC3545'
-                      ]
-                    : ['#EBEBEB', '#EBEBEB'] // Default gray when no answers
-                }
-                locations={
-                  totalScore.total > 0
-                    ? [
-                        0,
-                        totalScore.correct / totalScore.total,
-                        totalScore.correct / totalScore.total,
-                        1
-                      ]
-                    : [0, 1]
-                }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.scoreGradientBorder}
-              >
-                <ThemedView style={styles.statsContainer}>
-                  <Text style={styles.statsText}>
-                    Score: {totalScore.correct}/{totalScore.total}
-                    {totalScore.total > 0 && ` (${Math.round((totalScore.correct / totalScore.total) * 100)}%)`}
-                  </Text>
-                </ThemedView>
-              </LinearGradient>
-            </ThemedView>
+            <CircularProgress
+              percentage={totalScore.total > 0 ? Math.round((totalScore.correct / totalScore.total) * 100) : 0}
+              size={100}
+              strokeWidth={8}
+            />
 
-            <ThemedView style={[styles.statsContainer, styles.factsContainer]}>
-              <ThemedText style={styles.statsText}>
-                Facts: {totalGameFacts}
-              </ThemedText>
+            <ThemedView style={styles.statsInfo}>
+              <ThemedView style={styles.statItem}>
+                <ThemedText style={styles.statLabel}>Score</ThemedText>
+                <Text style={styles.statValue}>
+                  {totalScore.correct}/{totalScore.total}
+                </Text>
+              </ThemedView>
+
+            
             </ThemedView>
           </ThemedView>
 
@@ -438,6 +448,19 @@ export default function HomeScreen() {
             disabled={hasAnswered}
             forceRevealed={isViewingGameHistory}
             isFactAnswered={currentGameFact.isAnswered || false}
+            // Navigation props
+            showNavigation={totalGameFacts > 0}
+            hasPrevious={hasPreviousGameFact}
+            hasNext={hasNextGameFact}
+            onPrevious={goToPreviousGameFact}
+            onNext={goToNextGameFact}
+            navigationText={
+              currentUnansweredFact
+                ? 'Current Challenge'
+                : totalGameFacts > 0 && currentGameFactIndex >= 0
+                  ? `${currentGameFactIndex + 1} / ${totalGameFacts}`
+                  : '1 / 1'
+            }
           />
         ) : (
           <ThemedView style={styles.loadingCard}>
@@ -446,44 +469,6 @@ export default function HomeScreen() {
           </ThemedView>
         )}
       </ThemedView>
-
-      {/* History Navigation */}
-      {totalGameFacts > 0 && (
-        <ThemedView style={styles.historyNavigation}>
-          <Pressable
-            style={[
-              styles.navButton,
-              { opacity: hasPreviousGameFact ? 1 : 0.4 }
-            ]}
-            onPress={goToPreviousGameFact}
-            disabled={!hasPreviousGameFact}
-          >
-            <IconSymbol name="chevron.left" size={20} color="#717171" />
-          </Pressable>
-
-          <ThemedView style={styles.historyIndicator}>
-            <ThemedText style={styles.historyText}>
-              {currentUnansweredFact
-                ? 'Current Challenge'
-                : totalGameFacts > 0 && currentGameFactIndex >= 0
-                  ? `${currentGameFactIndex + 1} / ${totalGameFacts}`
-                  : '1 / 1'
-              }
-            </ThemedText>
-          </ThemedView>
-
-          <Pressable
-            style={[
-              styles.navButton,
-              { opacity: hasNextGameFact ? 1 : 0.4 }
-            ]}
-            onPress={goToNextGameFact}
-            disabled={!hasNextGameFact}
-          >
-            <IconSymbol name="chevron.right" size={20} color="#717171" />
-          </Pressable>
-        </ThemedView>
-      )}
 
       {/* Generate New Fact Button (above ad) */}
       <ThemedView style={styles.buttonContainer}> 
@@ -629,7 +614,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   header: {
     marginTop: 100,
-    //paddingTop: 40,
+    paddingTop: 20,
     paddingBottom: 30,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 24,
@@ -661,38 +646,33 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 20,
     alignSelf: 'center',
+    alignItems: 'center',
     backgroundColor: 'transparent',
+    paddingVertical: 0,
   },
-  scoreContainerWrapper: {
-    flex: 1,
+  statsInfo: {
     backgroundColor: 'transparent',
+    gap: 16,
   },
-  scoreGradientBorder: {
-    borderRadius: 12,
-    padding: 2, // This creates the border thickness
-    minHeight: 44, // Ensure minimum height
+  statItem: {
+    backgroundColor: 'transparent',
+    alignItems: 'flex-start',
   },
-  statsContainer: {
-    backgroundColor: '#F7F7F7', // Airbnb light gray
-    borderRadius: 10, // Slightly smaller to account for gradient border
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    flex: 1,
-    minHeight: 40, // Ensure the content has proper height
-    justifyContent: 'center', // Center the text vertically
+  statLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#6B6B6B',
+    marginBottom: 4,
+    letterSpacing: 0.2,
   },
-  factsContainer: {
-    borderWidth: 1,
-    borderColor: '#EBEBEB',
-    borderRadius: 12, // Back to original radius for facts container
-  },
-  statsText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000000', // Black like Airbnb
-    textAlign: 'center',
+  statValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+    letterSpacing: -0.5,
   },
   cardContainer: {
     paddingTop: 20,

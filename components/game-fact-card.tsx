@@ -23,20 +23,43 @@ interface GameFactCardProps {
   disabled?: boolean;
   forceRevealed?: boolean; // Force the card to show in revealed state (for history)
   isFactAnswered?: boolean; // Whether this specific fact has been answered
+  // Navigation props
+  showNavigation?: boolean;
+  hasPrevious?: boolean;
+  hasNext?: boolean;
+  onPrevious?: () => void;
+  onNext?: () => void;
+  navigationText?: string;
 }
 
 type AnswerState = 'waiting' | 'correct' | 'incorrect' | 'revealed';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, disabled = false, forceRevealed = false, isFactAnswered = false }: GameFactCardProps) {
+export function GameFactCard({
+  gameFact,
+  onAnswer,
+  onPress,
+  isLoading = false,
+  disabled = false,
+  forceRevealed = false,
+  isFactAnswered = false,
+  showNavigation = false,
+  hasPrevious = false,
+  hasNext = false,
+  onPrevious,
+  onNext,
+  navigationText = ''
+}: GameFactCardProps) {
   const [answerState, setAnswerState] = useState<AnswerState>('waiting');
   const [showExplanation, setShowExplanation] = useState(false);
+  const [showInfoHint, setShowInfoHint] = useState(false);
 
   const scale = useSharedValue(1);
   const cardOpacity = useSharedValue(1);
   const tapHintOpacity = useSharedValue(1);
   const tapHintScale = useSharedValue(1);
+  const infoIconScale = useSharedValue(1);
 
   // Reset state when a new fact is loaded or force revealed state
   React.useEffect(() => {
@@ -45,12 +68,16 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
       setShowExplanation(true);
       // Start tap hint animation
       startTapHintAnimation();
+      // Start info icon pulse animation
+      startInfoIconPulse();
     } else {
       setAnswerState('waiting');
       setShowExplanation(false);
       // Reset tap hint animation
       tapHintOpacity.value = 1;
       tapHintScale.value = 1;
+      // Reset info icon scale
+      infoIconScale.value = 1;
     }
   }, [gameFact.id, forceRevealed, isFactAnswered]); // Reset when fact ID changes, forceRevealed changes, or answered state changes
 
@@ -84,6 +111,22 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
       false
     );
   };
+
+  const startInfoIconPulse = () => {
+    // Pulse animation for info icon - runs for 1 second
+    infoIconScale.value = withRepeat(
+      withSequence(
+        withSpring(1.15, { damping: 2, stiffness: 100 }),
+        withSpring(1, { damping: 2, stiffness: 100 })
+      ),
+      2, // Repeat 2 times (approximately 1 second total)
+      false
+    );
+  };
+
+  const infoIconAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: infoIconScale.value }],
+  }));
 
   const handleAnswer = async (userGuess: boolean) => {
     if (disabled || isLoading || answerState !== 'waiting' || forceRevealed || isFactAnswered) return;
@@ -138,6 +181,13 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
       default:
         return '#DDDDDD'; // Light gray
     }
+  };
+
+  const handleInfoPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShowInfoHint(true);
+    // Hide hint after 2 seconds
+    setTimeout(() => setShowInfoHint(false), 2000);
   };
 
   return (
@@ -236,15 +286,56 @@ export function GameFactCard({ gameFact, onAnswer, onPress, isLoading = false, d
               </ThemedText>
             )}
 
-            {/* Show tap hint only after answer is revealed */}
-            {onPress && (
-              <Animated.View style={[styles.tapHint, tapHintAnimatedStyle]}>
-                <IconSymbol name="info.circle" size={16} color="#9CA3AF" />
-                <ThemedText style={styles.tapHintText}>
-                  Tap for details & sharing
-                </ThemedText>
-              </Animated.View>
+            {/* History Navigation - inside card below explanation */}
+            {showNavigation && (
+              <ThemedView style={styles.navigationContainer}>
+                <Pressable
+                  style={[
+                    styles.navArrow,
+                    { opacity: hasPrevious ? 1 : 0.3 }
+                  ]}
+                  onPress={() => {
+                    if (hasPrevious && onPrevious) {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      onPrevious();
+                    }
+                  }}
+                  disabled={!hasPrevious}
+                >
+                  <IconSymbol name="chevron.left" size={20} color="#6B6B6B" />
+                </Pressable>
+
+                <ThemedView style={styles.navigationIndicator}>
+                  <ThemedText style={styles.navigationText}>
+                    {navigationText}
+                  </ThemedText>
+                </ThemedView>
+
+                <Pressable
+                  style={[
+                    styles.navArrow,
+                    { opacity: hasNext ? 1 : 0.3 }
+                  ]}
+                  onPress={() => {
+                    if (hasNext && onNext) {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      onNext();
+                    }
+                  }}
+                  disabled={!hasNext}
+                >
+                  <IconSymbol name="chevron.right" size={20} color="#6B6B6B" />
+                </Pressable>
+              </ThemedView>
             )}
+          </ThemedView>
+        )}
+
+        {/* Tap for more section - at bottom of card when revealed */}
+        {onPress && answerState === 'revealed' && (
+          <ThemedView style={styles.tapForMoreSection}>
+            <IconSymbol name="arrow.up.circle" size={16} color="#9CA3AF" />
+            <ThemedText style={styles.tapForMoreText}>Tap for more</ThemedText>
           </ThemedView>
         )}
         </ThemedView>
@@ -380,25 +471,62 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontStyle: 'italic',
   },
-  tapHint: {
-    backgroundColor: '#F9FAFB',
+  tapForMoreSection: {
+    backgroundColor: '#F7F7F7',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E8E8E8',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.06)',
-    marginTop: 12,
+    gap: 8,
+    marginTop: 16,
+    marginHorizontal: -24,
+    marginBottom: -24,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
   },
-  tapHintText: {
+  tapForMoreText: {
     fontSize: 13,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
     fontWeight: '500',
-    color: '#717171', // Airbnb secondary gray
-    fontStyle: 'italic',
-    letterSpacing: 0.1,
+    color: '#6B6B6B',
+    letterSpacing: 0.2,
+  },
+  navigationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 16,
+    paddingBottom: 0,
+    paddingHorizontal: 0,
+    backgroundColor: 'transparent',
+    gap: 12,
+    marginTop: 8,
+  },
+  navArrow: {
+    backgroundColor: '#F7F7F7',
+    borderRadius: 20,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  navigationIndicator: {
+    backgroundColor: '#F7F7F7',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  navigationText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    textAlign: 'center',
   },
 });

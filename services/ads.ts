@@ -1,18 +1,18 @@
 import { gatherConsentAndInitAds } from '@/services/ads-consent';
 import { Platform } from 'react-native';
 import {
-  AdEventType,
-  BannerAdSize,
-  InterstitialAd,
-  TestIds,
+    AdEventType,
+    BannerAdSize,
+    InterstitialAd,
+    TestIds,
 } from 'react-native-google-mobile-ads';
 
 // Central place for ad unit IDs. Replace with your real AdMob unit IDs for production.
 export const adUnitIds = {
   ios: {
-    banner: TestIds.ADAPTIVE_BANNER,
+    banner: __DEV__ ? TestIds.ADAPTIVE_BANNER : null, // TODO: Add production iOS banner unit ID
     interstitial: null, // iOS not configured
-    native: TestIds.NATIVE, // show test native on iOS in dev
+    native: __DEV__ ? TestIds.NATIVE : null, // TODO: Add production iOS native unit ID
   },
   android: {
     banner: __DEV__ ? TestIds.ADAPTIVE_BANNER : 'ca-app-pub-7258081299134493/3365228658',
