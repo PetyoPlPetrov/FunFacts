@@ -21,22 +21,35 @@ export function NativeScoreRow() {
     let mounted = true;
     let lastAd: NativeAd | null = null;
 
+    // Add timeout to prevent infinite loading state
+    const timeout = setTimeout(() => {
+      if (mounted && !lastAd) {
+        if (__DEV__) console.log('[Ads] Native row load timeout');
+        setHasError(true);
+      }
+    }, 10000); // 10 second timeout
+
     if (__DEV__) console.log('[Ads] Native row load', unitId);
     NativeAd.createForAdRequest(unitId)
       .then((ad) => {
         lastAd = ad;
         if (mounted) {
+          clearTimeout(timeout);
           setNativeAd(ad);
           setHasError(false);
         }
       })
       .catch((e) => {
         if (__DEV__) console.log('[Ads] Native load error', e);
-        if (mounted) setHasError(true);
+        if (mounted) {
+          clearTimeout(timeout);
+          setHasError(true);
+        }
       });
 
     return () => {
       mounted = false;
+      clearTimeout(timeout);
       lastAd?.destroy?.();
     };
   }, []);
@@ -87,7 +100,13 @@ export function NativeScoreRow() {
       {/* Left: icon (replaces rank circle) */}
       {nativeAd.icon ? (
         <NativeAsset assetType={NativeAssetType.ICON}>
-          <Image source={{ uri: nativeAd.icon }} style={styles.iconImage} />
+          <View style={styles.iconContainer}>
+            <Image
+              source={{ uri: typeof nativeAd.icon === 'string' ? nativeAd.icon : nativeAd.icon.url }}
+              style={styles.iconImage}
+              resizeMode="contain"
+            />
+          </View>
         </NativeAsset>
       ) : (
         <View style={styles.leftStub} />
@@ -165,11 +184,19 @@ const styles = StyleSheet.create({
     height: 32,
     marginRight: 12,
   },
-  iconImage: {
+  iconContainer: {
     width: 32,
     height: 32,
     borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    overflow: 'hidden',
     marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconImage: {
+    width: 32,
+    height: 32,
   },
   middle: {
     flex: 1,

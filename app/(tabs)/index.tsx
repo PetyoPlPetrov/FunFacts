@@ -419,7 +419,7 @@ export default function HomeScreen() {
     <View style={{ flex: 1 }}>
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={{ paddingBottom: 110 }}
+        contentContainerStyle={{ paddingBottom: 20 }}
         onContentSizeChange={() => {
           if (!hasAutoScrolled) {
             scrollRef.current?.scrollToEnd({ animated: true });
@@ -515,8 +515,8 @@ export default function HomeScreen() {
 
       {/* Generate New Fact Button */}
       <ThemedView style={styles.buttonContainer}>
-          {/* New Challenge Button - Only show after answering */}
-          {hasAnswered && (
+          {/* New Challenge Button - Only show after answering and not loading */}
+          {hasAnswered && !isLoading && (
             <LinearGradient
               colors={['#F54768', '#D91E4F']}
               start={{ x: 0, y: 0 }}
@@ -581,7 +581,7 @@ export default function HomeScreen() {
 
       {/* Native Ad */}
       <ThemedView style={styles.nativeAdContainer}>
-        <NativeAd compact={true} />
+        <NativeAd compact={true} style={{ marginBottom: 0 }} />
       </ThemedView>
 
       </ScrollView>
