@@ -7,6 +7,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, use
 
 import { BannerAd } from '@/components/ads/banner-ad';
 import { InterstitialAd } from '@/components/ads/interstitial-ad';
+import { NativeAd } from '@/components/ads/native-ad';
 import { CircularProgress } from '@/components/circular-progress';
 import { FactDetailModal } from '@/components/fact-detail-modal';
 import { GameFactCard } from '@/components/game-fact-card';
@@ -512,8 +513,8 @@ export default function HomeScreen() {
         )}
       </ThemedView>
 
-      {/* Generate New Fact Button (above ad) */}
-      <ThemedView style={styles.buttonContainer}> 
+      {/* Generate New Fact Button */}
+      <ThemedView style={styles.buttonContainer}>
           {/* New Challenge Button - Only show after answering */}
           {hasAnswered && (
             <LinearGradient
@@ -576,6 +577,11 @@ export default function HomeScreen() {
               </Text>
             </Pressable>
           )}
+      </ThemedView>
+
+      {/* Native Ad */}
+      <ThemedView style={styles.nativeAdContainer}>
+        <NativeAd compact={true} />
       </ThemedView>
 
       </ScrollView>
@@ -718,6 +724,10 @@ const styles = StyleSheet.create({
   },
   cardContainer: {
     paddingTop: 20,
+    backgroundColor: 'transparent',
+  },
+  nativeAdContainer: {
+    paddingHorizontal: 20,
     backgroundColor: 'transparent',
   },
   buttonContainer: {

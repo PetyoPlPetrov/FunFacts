@@ -181,7 +181,7 @@ export default function ScoresScreen() {
                   return scoreStats.allScores.map((score, index) => (
                     <React.Fragment key={score.id}>
                       {renderScoreHistoryItem(score, index)}
-                      {index === midIndex && <NativeScoreRow />}
+                      {index === midIndex && <NativeScoreRow key="native-ad" />}
                     </React.Fragment>
                   ));
                 })()}

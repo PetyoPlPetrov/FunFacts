@@ -40,27 +40,34 @@ export function NativeAd({ style, compact = false }: NativeAdProps) {
       return;
     }
 
+    let mounted = true;
+    let lastAd: GoogleNativeAd | null = null;
+
     // Create and load native ad
     GoogleNativeAd.createForAdRequest(adUnitId, {
       requestNonPersonalizedAdsOnly: false,
     })
       .then((ad) => {
-        if (__DEV__) console.log('[NativeAd] Ad loaded successfully', ad);
-        setNativeAd(ad);
-        setLoading(false);
-        setError(false);
+        lastAd = ad;
+        if (mounted) {
+          if (__DEV__) console.log('[NativeAd] Ad loaded successfully', ad);
+          setNativeAd(ad);
+          setLoading(false);
+          setError(false);
+        }
       })
       .catch((err) => {
         if (__DEV__) console.log('[NativeAd] Failed to load:', err);
-        setLoading(false);
-        setError(true);
+        if (mounted) {
+          setLoading(false);
+          setError(true);
+        }
       });
 
     // Cleanup
     return () => {
-      if (nativeAd) {
-        nativeAd.destroy?.();
-      }
+      mounted = false;
+      lastAd?.destroy?.();
     };
   }, []);
 

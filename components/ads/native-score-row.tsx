@@ -1,6 +1,6 @@
 import { adFeatures, adUnitIds } from '@/services/ads';
 import React, { useEffect, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, StyleSheet, Text, View } from 'react-native';
 import {
     NativeAd,
     NativeAdEventType,
@@ -12,6 +12,7 @@ import {
 
 export function NativeScoreRow() {
   const [nativeAd, setNativeAd] = useState<NativeAd | null>(null);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     if (!adFeatures.native) return;
@@ -24,10 +25,14 @@ export function NativeScoreRow() {
     NativeAd.createForAdRequest(unitId)
       .then((ad) => {
         lastAd = ad;
-        if (mounted) setNativeAd(ad);
+        if (mounted) {
+          setNativeAd(ad);
+          setHasError(false);
+        }
       })
       .catch((e) => {
         if (__DEV__) console.log('[Ads] Native load error', e);
+        if (mounted) setHasError(true);
       });
 
     return () => {
@@ -51,7 +56,9 @@ export function NativeScoreRow() {
     };
   }, [nativeAd]);
 
-  if (!adFeatures.native) return null;
+  // Don't render if native ads are disabled or if there was an error
+  if (!adFeatures.native || hasError) return null;
+
   if (!nativeAd) {
     // Lightweight placeholder to keep spacing consistent while loading
     return (
@@ -67,6 +74,9 @@ export function NativeScoreRow() {
     );
   }
 
+  // Type-safe access to callToAction
+  const callToAction = (nativeAd as NativeAd & { callToAction?: string }).callToAction;
+
   return (
     <NativeAdView nativeAd={nativeAd} style={styles.row}>
       {/* Sponsored label */}
@@ -74,14 +84,25 @@ export function NativeScoreRow() {
         <Text style={styles.sponsoredText}>Ad</Text>
       </View>
 
-      {/* Left: rank circle placeholder to match list layout */}
-      <View style={styles.leftStub} />
+      {/* Left: icon (replaces rank circle) */}
+      {nativeAd.icon ? (
+        <NativeAsset assetType={NativeAssetType.ICON}>
+          <Image source={{ uri: nativeAd.icon }} style={styles.iconImage} />
+        </NativeAsset>
+      ) : (
+        <View style={styles.leftStub} />
+      )}
 
-      {/* Middle: headline and body */}
+      {/* Middle: headline, advertiser, and body */}
       <View style={styles.middle}>
         <NativeAsset assetType={NativeAssetType.HEADLINE}>
           <Text style={styles.headline} numberOfLines={1}>{nativeAd.headline}</Text>
         </NativeAsset>
+        {nativeAd.advertiser && (
+          <NativeAsset assetType={NativeAssetType.ADVERTISER}>
+            <Text style={styles.advertiser} numberOfLines={1}>{nativeAd.advertiser}</Text>
+          </NativeAsset>
+        )}
         {nativeAd.body && (
           <NativeAsset assetType={NativeAssetType.BODY}>
             <Text style={styles.body} numberOfLines={1}>{nativeAd.body}</Text>
@@ -90,10 +111,10 @@ export function NativeScoreRow() {
       </View>
 
       {/* Right: CTA */}
-      {(nativeAd as any).callToAction ? (
+      {callToAction ? (
         <NativeAsset assetType={NativeAssetType.CALL_TO_ACTION}>
           <View style={styles.ctaContainer}>
-            <Text style={styles.cta} numberOfLines={1}>{(nativeAd as any).callToAction}</Text>
+            <Text style={styles.cta} numberOfLines={1}>{callToAction}</Text>
           </View>
         </NativeAsset>
       ) : null}
@@ -144,6 +165,12 @@ const styles = StyleSheet.create({
     height: 32,
     marginRight: 12,
   },
+  iconImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 12,
+  },
   middle: {
     flex: 1,
     marginRight: 12,
@@ -152,6 +179,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#111827',
+  },
+  advertiser: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    marginTop: 1,
   },
   body: {
     fontSize: 12,

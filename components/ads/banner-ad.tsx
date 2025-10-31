@@ -39,7 +39,6 @@ export function BannerAd({ size = 'medium', style }: BannerAdProps) {
   };
 
 
-  return null;
 
   return (
     
