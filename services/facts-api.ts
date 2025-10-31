@@ -29,9 +29,223 @@ export interface GameFact {
   wasGuessCorrect?: boolean; // Track if the user's guess was correct
 }
 
+/**
+ * Static starter facts for instant loading when app opens
+ * Mix of true facts (curated) and false facts for variety
+ */
+const STATIC_STARTER_FACTS: GameFact[] = [
+  {
+    id: 'static-true-1',
+    text: 'Octopuses have three hearts and blue blood.',
+    source: 'Marine Biology',
+    isTrue: true,
+    dateDiscovered: new Date().toISOString()
+  },
+  {
+    id: 'static-false-1',
+    text: 'Goldfish have a memory span of only 3 seconds.',
+    source: 'Common Myth',
+    isTrue: false,
+    explanation: 'Actually, goldfish can remember things for months, not seconds. They can be trained to respond to different colors, sounds, and cues.',
+    category: 'Animals',
+    dateDiscovered: new Date().toISOString()
+  },
+  {
+    id: 'static-true-2',
+    text: 'A group of flamingos is called a "flamboyance".',
+    source: 'Ornithology',
+    isTrue: true,
+    dateDiscovered: new Date().toISOString()
+  },
+  {
+    id: 'static-false-2',
+    text: 'Lightning never strikes the same place twice.',
+    source: 'Popular Saying',
+    isTrue: false,
+    explanation: 'Lightning frequently strikes the same place multiple times. The Empire State Building gets struck about 100 times per year.',
+    category: 'Weather',
+    dateDiscovered: new Date().toISOString()
+  },
+  {
+    id: 'static-true-3',
+    text: 'Bananas are berries, but strawberries are not.',
+    source: 'Botany',
+    isTrue: true,
+    dateDiscovered: new Date().toISOString()
+  }
+];
+
 class FactsApiService {
   private baseUrl = 'https://uselessfacts.jsph.pl/api/v2';
   private isFirstLoad = true;
+  
+  // Queue system for instant fact delivery
+  private factQueue: GameFact[] = [];
+  private isPrefetching = false;
+  private readonly MIN_QUEUE_SIZE = 3; // Prefetch when queue drops below this
+  private readonly PREFETCH_BATCH_SIZE = 5; // Fetch this many at a time
+
+  /**
+   * Initialize the fact queue with static starter facts
+   */
+  initializeQueue(): void {
+    if (__DEV__) {
+      console.log('[FactsAPI] Initializing queue with static starter facts');
+    }
+    // Shuffle static facts and add to queue
+    const shuffled = [...STATIC_STARTER_FACTS].sort(() => 0.5 - Math.random());
+    this.factQueue = shuffled;
+    
+    // Start prefetching in background immediately
+    this.prefetchFacts().catch(() => {
+      // Silent fail - queue will be replenished as needed
+    });
+  }
+
+  /**
+   * Get a fact from queue (instant) or fetch if queue is empty
+   */
+  async getRandomGameFact(): Promise<GameFact> {
+    const startTime = Date.now();
+    
+    // If queue has facts, return one instantly
+    if (this.factQueue.length > 0) {
+      const fact = this.factQueue.shift()!;
+      const duration = Date.now() - startTime;
+      
+      if (__DEV__) {
+        console.log(`[FactsAPI] Returning fact from queue (${duration}ms, ${this.factQueue.length} remaining):`, {
+          id: fact.id,
+          isTrue: fact.isTrue,
+          source: fact.source
+        });
+      }
+      
+      // Trigger prefetch if queue is getting low
+      if (this.factQueue.length < this.MIN_QUEUE_SIZE && !this.isPrefetching) {
+        this.prefetchFacts().catch(() => {
+          // Silent fail - will retry on next getRandomGameFact call
+        });
+      }
+      
+      return fact;
+    }
+    
+    // Queue is empty, fetch immediately
+    if (__DEV__) {
+      console.log('[FactsAPI] Queue empty, fetching fact immediately...');
+    }
+    
+    return this.fetchNewGameFact();
+  }
+
+  /**
+   * Fetch a new game fact from API or local
+   */
+  private async fetchNewGameFact(): Promise<GameFact> {
+    const startTime = Date.now();
+    // 50/50 chance: true fact from API or false fact from local
+    const shouldFetchTrue = Math.random() < 0.5;
+
+    if (__DEV__) {
+      console.log(`[FactsAPI] fetchNewGameFact() - will ${shouldFetchTrue ? 'TRY API' : 'USE LOCAL false fact'}`);
+    }
+
+    if (shouldFetchTrue) {
+      // Try to fetch a true fact from API
+      try {
+        if (__DEV__) {
+          console.log('[FactsAPI] Attempting to fetch true fact from API...');
+        }
+        const realFact = await this.getRandomFact();
+        const duration = Date.now() - startTime;
+        
+        if (__DEV__) {
+          console.log(`[FactsAPI] Successfully fetched true fact from API (${duration}ms)`);
+        }
+        
+        const gameFact: GameFact = {
+          id: realFact.id,
+          text: realFact.text,
+          source: realFact.source,
+          source_url: realFact.source_url,
+          isTrue: true,
+          dateDiscovered: new Date().toISOString()
+        };
+        
+        return gameFact;
+      } catch (error) {
+        // If API fails, fallback to false fact
+        const duration = Date.now() - startTime;
+        if (__DEV__) {
+          console.warn(`[FactsAPI] API failed after ${duration}ms, falling back to false fact:`, {
+            error: error instanceof Error ? error.message : String(error)
+          });
+        }
+        return this.getFalseGameFact();
+      }
+    } else {
+      // Use local false fact
+      if (__DEV__) {
+        console.log('[FactsAPI] Using local false fact (50/50 random selected local)');
+      }
+      return this.getFalseGameFact();
+    }
+  }
+
+  /**
+   * Prefetch facts in the background to fill the queue
+   */
+  private async prefetchFacts(): Promise<void> {
+    if (this.isPrefetching) {
+      if (__DEV__) {
+        console.log('[FactsAPI] Prefetch already in progress, skipping');
+      }
+      return;
+    }
+
+    this.isPrefetching = true;
+    const targetSize = this.PREFETCH_BATCH_SIZE;
+    
+    if (__DEV__) {
+      console.log(`[FactsAPI] Starting prefetch of ${targetSize} facts...`);
+    }
+
+    try {
+      const facts: GameFact[] = [];
+      
+      // Fetch facts in parallel (but limit concurrency)
+      const fetchPromises = Array(targetSize).fill(null).map(() => 
+        this.fetchNewGameFact().catch(() => {
+          // If a fetch fails, use a false fact as fallback
+          return this.getFalseGameFact();
+        })
+      );
+      
+      const fetchedFacts = await Promise.all(fetchPromises);
+      facts.push(...fetchedFacts);
+
+      // Add to queue
+      this.factQueue.push(...facts);
+      
+      if (__DEV__) {
+        console.log(`[FactsAPI] Prefetch complete, queue now has ${this.factQueue.length} facts`);
+      }
+    } catch (error) {
+      if (__DEV__) {
+        console.error('[FactsAPI] Prefetch error:', error);
+      }
+    } finally {
+      this.isPrefetching = false;
+    }
+  }
+
+  /**
+   * Get current queue size (for debugging)
+   */
+  getQueueSize(): number {
+    return this.factQueue.length;
+  }
 
   /**
    * Sleep helper for delays
@@ -110,7 +324,7 @@ class FactsApiService {
       } catch (error) {
         const attemptDuration = Date.now() - attemptStartTime;
         lastError = error as Error;
-
+          console.log('error', error);
         if (__DEV__) {
           console.warn(`[FactsAPI] Attempt ${attempt}/${retryCount} failed after ${attemptDuration}ms:`, {
             error: error instanceof Error ? error.message : String(error),
@@ -190,84 +404,6 @@ class FactsApiService {
       isFavorite: false,
       dateDiscovered: new Date().toISOString()
     };
-  }
-
-  /**
-   * Get a random fact for the guessing game
-   * Randomly decides between fetching a true fact from API or using a false fact from local collection
-   */
-  async getRandomGameFact(): Promise<GameFact> {
-    const startTime = Date.now();
-    // 50/50 chance: true fact from API or false fact from local
-    const shouldFetchTrue = Math.random() < 0.5;
-
-    if (__DEV__) {
-      console.log(`[FactsAPI] getRandomGameFact() called - will ${shouldFetchTrue ? 'TRY API' : 'USE LOCAL false fact'}`);
-    }
-
-    if (shouldFetchTrue) {
-      // Try to fetch a true fact from API
-      try {
-        if (__DEV__) {
-          console.log('[FactsAPI] Attempting to fetch true fact from API...');
-        }
-        const realFact = await this.getRandomFact();
-        const duration = Date.now() - startTime;
-        
-        if (__DEV__) {
-          console.log(`[FactsAPI] Successfully fetched true fact from API (${duration}ms)`);
-        }
-        
-        const gameFact = {
-          id: realFact.id,
-          text: realFact.text,
-          source: realFact.source,
-          source_url: realFact.source_url,
-          isTrue: true,
-          dateDiscovered: new Date().toISOString()
-        };
-        
-        if (__DEV__) {
-          console.log('[FactsAPI] Returning true fact:', {
-            id: gameFact.id,
-            source: gameFact.source,
-            textPreview: gameFact.text.substring(0, 50) + '...'
-          });
-        }
-        
-        return gameFact;
-      } catch (error) {
-        // If API fails, fallback to false fact
-        const duration = Date.now() - startTime;
-        if (__DEV__) {
-          console.warn(`[FactsAPI] API failed after ${duration}ms, falling back to false fact:`, {
-            error: error instanceof Error ? error.message : String(error)
-          });
-        }
-        const falseFact = this.getFalseGameFact();
-        if (__DEV__) {
-          console.log('[FactsAPI] Returning false fact fallback:', {
-            id: falseFact.id,
-            source: falseFact.source
-          });
-        }
-        return falseFact;
-      }
-    } else {
-      // Use local false fact
-      if (__DEV__) {
-        console.log('[FactsAPI] Using local false fact (50/50 random selected local)');
-      }
-      const falseFact = this.getFalseGameFact();
-      const duration = Date.now() - startTime;
-      if (__DEV__) {
-        console.log(`[FactsAPI] Returning local false fact (${duration}ms):`, {
-          id: falseFact.id,
-          source: falseFact.source
-        });
-      }
-      return falseFact;
-    }
   }
 
   /**

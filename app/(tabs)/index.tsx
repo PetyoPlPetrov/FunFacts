@@ -1,7 +1,7 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { BannerAd } from '@/components/ads/banner-ad';
@@ -43,57 +43,36 @@ export default function HomeScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const [hasAutoScrolled, setHasAutoScrolled] = useState(false);
 
-  // Load initial fact and current score on mount
-  useEffect(() => {
-    loadInitialGameState();
-  }, []);
-
-  const loadInitialGameState = async () => {
-    if (__DEV__) {
-      console.log('[Game] Starting initial game state load');
-    }
-    
-    // Always start fresh - clear any previously saved current score
-    try {
-      await scoreManager.resetCurrentScore();
-      // Ensure we start with 0/0 every time
-      setTotalScore({ correct: 0, total: 0 });
-      if (__DEV__) {
-        console.log('[Game] Score reset complete');
-      }
-    } catch (error) {
-      if (__DEV__) {
-        console.error('[Game] Error resetting current score:', error);
-      }
-    }
-
-    // Load initial fact
-    if (__DEV__) {
-      console.log('[Game] Loading initial fact...');
-    }
-    loadNewGameFact();
-  };
-
-  const loadNewGameFact = async () => {
+  const loadNewGameFact = useCallback(async () => {
     const startTime = Date.now();
+    const queueSizeBefore = factsApi.getQueueSize();
+    
     if (__DEV__) {
-      console.log('[Game] loadNewGameFact() called');
+      console.log(`[Game] loadNewGameFact() called (queue size: ${queueSizeBefore})`);
     }
     
-    setIsLoading(true);
+    // Only show loading if queue is empty (will need to fetch)
+    // If queue has facts, it will be instant so no need for loading spinner
+    const needsLoading = queueSizeBefore === 0;
+    if (needsLoading) {
+      setIsLoading(true);
+    }
     setError(null);
     setHasAnswered(false);
 
     try {
       if (__DEV__) {
-        console.log('[Game] Fetching random game fact from API...');
+        console.log('[Game] Getting fact from queue (instant) or fetching if queue empty...');
       }
       
+      // This will return instantly if queue has facts, or fetch if queue is empty
       const gameFact = await factsApi.getRandomGameFact();
       
       const duration = Date.now() - startTime;
+      const queueSizeAfter = factsApi.getQueueSize();
+      
       if (__DEV__) {
-        console.log(`[Game] Successfully loaded game fact (${duration}ms):`, {
+        console.log(`[Game] Successfully loaded game fact (${duration}ms, queue now: ${queueSizeAfter}):`, {
           id: gameFact.id,
           isTrue: gameFact.isTrue,
           source: gameFact.source,
@@ -152,10 +131,49 @@ export default function HomeScreen() {
         console.log('[Game] loadNewGameFact() completed, loading state set to false');
       }
     }
-  };
+  }, [gameFactsHistory.length]);
+
+  const loadInitialGameState = useCallback(async () => {
+    if (__DEV__) {
+      console.log('[Game] Starting initial game state load');
+    }
+
+    // Always start fresh - clear any previously saved current score
+    try {
+      await scoreManager.resetCurrentScore();
+      // Ensure we start with 0/0 every time
+      setTotalScore({ correct: 0, total: 0 });
+      if (__DEV__) {
+        console.log('[Game] Score reset complete');
+      }
+    } catch (error) {
+      if (__DEV__) {
+        console.error('[Game] Error resetting current score:', error);
+      }
+    }
+
+    // Load initial fact (should be instant from queue)
+    if (__DEV__) {
+      console.log('[Game] Loading initial fact from queue (should be instant)...');
+    }
+    loadNewGameFact();
+  }, [loadNewGameFact]);
+
+  // Load initial fact and current score on mount
+  useEffect(() => {
+    // Initialize the fact queue with static starter facts for instant loading
+    factsApi.initializeQueue();
+
+    // Load the initial game state (will get first fact from queue - instant!)
+    loadInitialGameState();
+  }, [loadInitialGameState]);
 
   const loadNewGameFactForRestart = async () => {
-    setIsLoading(true);
+    const queueSize = factsApi.getQueueSize();
+    // Only show loading if queue is empty
+    if (queueSize === 0) {
+      setIsLoading(true);
+    }
     setError(null);
     setHasAnswered(false);
 
@@ -304,7 +322,10 @@ export default function HomeScreen() {
     // Close settings modal
     setSettingsModalVisible(false);
 
-    // Load a new fact to start fresh
+    // Reinitialize queue for fresh start
+    factsApi.initializeQueue();
+
+    // Load a new fact to start fresh (should be instant from queue)
     await loadNewGameFactForRestart();
   };
 
@@ -934,5 +955,26 @@ const styles = StyleSheet.create({
   settingsButtonSubtitle: {
     fontSize: 14,
     color: '#6B7280',
+  },
+  bannerContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 60,
+    zIndex: 1000,
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 10,
+    shadowColor: '#000000',
   },
 });

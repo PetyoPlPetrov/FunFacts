@@ -1,10 +1,10 @@
 import { gatherConsentAndInitAds } from '@/services/ads-consent';
 import { Platform } from 'react-native';
 import {
-    AdEventType,
-    BannerAdSize,
-    InterstitialAd,
-    TestIds,
+  AdEventType,
+  BannerAdSize,
+  InterstitialAd,
+  TestIds,
 } from 'react-native-google-mobile-ads';
 
 // Central place for ad unit IDs. Replace with your real AdMob unit IDs for production.
@@ -15,9 +15,9 @@ export const adUnitIds = {
     native: __DEV__ ? TestIds.NATIVE : null, // TODO: Add production iOS native unit ID
   },
   android: {
-    banner: __DEV__ ? TestIds.ADAPTIVE_BANNER : 'ca-app-pub-7258081299134493/3365228658',
-    interstitial: __DEV__ ? TestIds.INTERSTITIAL : 'ca-app-pub-7258081299134493/6671184316',
-    native: __DEV__ ? TestIds.NATIVE : 'ca-app-pub-7258081299134493/7980396551',
+    banner: 'ca-app-pub-7258081299134493/3365228658',
+    interstitial: 'ca-app-pub-7258081299134493/6671184316',
+    native: 'ca-app-pub-7258081299134493/7980396551',
   }
 } as const;
 
@@ -33,7 +33,7 @@ export const getBannerSize = (size?: 'small' | 'medium' | 'large') => {
     case 'small':
       return BannerAdSize.BANNER;
     case 'large':
-      return BannerAdSize.LARGE_BANNER;
+      return BannerAdSize.BANNER;
     case 'medium':
     default:
       return BannerAdSize.ANCHORED_ADAPTIVE_BANNER;
